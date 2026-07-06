@@ -1,0 +1,2488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>별사탕 테트리스 ⭐</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 언어별 귀여운 폰트: 한국어=Jua / 영어·불어=Baloo 2 / 중국어=ZCOOL KuaiLe (오프라인 시 시스템 폰트로 자동 대체) -->
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Baloo+2:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<!-- 📱 PWA: 폰에서 "홈 화면에 추가"로 앱처럼 설치 가능 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#241b3f">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+/* ============================================================
+   별사탕 테트리스 - 캔디 아케이드 디자인
+   팔레트: 밤하늘 보라 배경 + 캔디 파스텔 블럭
+   ============================================================ */
+:root{
+  --bg-deep:#241b3f;
+  --bg-panel:#332a55;
+  --bg-panel2:#3e3468;
+  --line:#4a3f7a;
+  --ink:#fff6ff;
+  --ink-dim:#b9aee0;
+  --candy-pink:#ff8fb1;
+  --candy-mint:#6fe8cf;
+  --candy-yellow:#ffd66b;
+  --candy-sky:#7fc4ff;
+  --candy-purple:#c39bff;
+  --candy-orange:#ffb36b;
+  --danger:#ff6b81;
+  --btn-shadow:0 4px 0 rgba(0,0,0,.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  font-family:"Jua","BM Jua",'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #3d2f6b 0%, transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, #4a2a5e 0%, transparent 55%),
+    var(--bg-deep);
+  color:var(--ink);
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+  position:fixed;inset:0;
+}
+body[data-lang="ko"]{font-family:"Jua",'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;}
+body[data-lang="en"],body[data-lang="fr"]{font-family:"Baloo 2","Comic Sans MS",'Noto Sans',system-ui,sans-serif;}
+body[data-lang="zh"]{font-family:"ZCOOL KuaiLe","Jua",'PingFang SC','Microsoft YaHei',system-ui,sans-serif;}
+button{font-family:inherit;color:inherit;border:none;cursor:pointer;}
+
+/* ---------- 화면 전환 ---------- */
+.screen{position:absolute;inset:0;display:none;flex-direction:column;}
+.screen.on{display:flex;}
+
+/* ---------- 배경 별 ---------- */
+.bg-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.bg-stars span{position:absolute;font-size:12px;opacity:.35;animation:twinkle 3s infinite ease-in-out;}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.5;transform:scale(1.1)}}
+
+/* ============================================================
+   메뉴 화면
+   ============================================================ */
+#menuScreen{align-items:center;justify-content:center;gap:14px;padding:20px;z-index:1;}
+.logo{font-size:clamp(34px,8vw,58px);letter-spacing:2px;text-shadow:0 4px 0 #1a1330,0 0 24px rgba(255,143,177,.5);}
+.logo .star{display:inline-block;animation:logoBounce 1.6s infinite ease-in-out;}
+@keyframes logoBounce{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-8px) rotate(8deg)}}
+.tagline{color:var(--ink-dim);font-size:14px;margin-bottom:6px;}
+.menu-card{
+  width:min(420px,94vw);background:var(--bg-panel);border:2px solid var(--line);
+  border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.menu-label{font-size:13px;color:var(--ink-dim);letter-spacing:1px;}
+.seg{display:flex;gap:8px;}
+.seg button{
+  flex:1;padding:12px 6px;border-radius:14px;background:var(--bg-panel2);
+  border:2px solid var(--line);font-size:15px;transition:transform .08s;
+}
+.seg button.sel{background:linear-gradient(180deg,var(--candy-pink),#f76fa0);border-color:#ffc2d6;box-shadow:var(--btn-shadow);color:#3a1024;}
+.seg button:active{transform:translateY(2px);}
+.seg button.disabled{opacity:.45;position:relative;}
+.seg button .soon{display:block;font-size:10px;color:var(--candy-yellow);}
+.mode-desc{font-size:12px;color:var(--ink-dim);background:#2b2249;border-radius:10px;padding:8px 10px;min-height:34px;line-height:1.5;}
+.play-btn{
+  width:min(420px,94vw);padding:16px;border-radius:18px;font-size:22px;letter-spacing:2px;
+  background:linear-gradient(180deg,var(--candy-yellow),#ffb845);color:#4a2c00;
+  box-shadow:0 6px 0 #a86e12,0 12px 24px rgba(0,0,0,.35);transition:transform .08s;
+}
+.play-btn:active{transform:translateY(4px);box-shadow:0 2px 0 #a86e12;}
+.menu-foot{display:flex;gap:10px;}
+.small-btn{
+  padding:10px 14px;border-radius:12px;background:var(--bg-panel2);
+  border:2px solid var(--line);font-size:13px;box-shadow:var(--btn-shadow);
+}
+.small-btn:active{transform:translateY(2px);box-shadow:none;}
+
+/* ============================================================
+   게임 화면
+   ============================================================ */
+#gameScreen{z-index:1;}
+.hud{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;gap:8px;z-index:5;
+}
+.hud .pill{
+  background:var(--bg-panel);border:2px solid var(--line);border-radius:999px;
+  padding:5px 12px;font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.hud .pill b{color:var(--candy-yellow);}
+#pauseBtn{background:var(--bg-panel2);}
+
+.game-area{position:relative;flex:1;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;}
+.board-wrap{position:relative;margin-top:4px;}
+#board{display:block;background:transparent;border:3px solid var(--line);border-radius:14px;box-shadow:0 0 0 4px #171129,0 14px 30px rgba(0,0,0,.45);}
+.board-wrap{background:#1c1536;border-radius:14px;}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:4;}
+.board-wrap.shake{animation:shake .25s;}
+@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(3px,4px)}50%{transform:translate(-3px,2px)}75%{transform:translate(2px,-3px)}100%{transform:translate(0,0)}}
+
+/* 상대방 미니 화면 */
+#oppPanel{
+  position:absolute;top:6px;width:110px;z-index:6;
+  background:var(--bg-panel);border:2px solid var(--line);border-radius:14px;
+  padding:6px;display:none;flex-direction:column;gap:4px;align-items:center;
+  box-shadow:0 8px 18px rgba(0,0,0,.4);
+}
+#oppPanel.right{right:8px;} #oppPanel.left{left:8px;}
+#oppPanel .opp-name{font-size:11px;color:var(--ink-dim);max-width:100px;overflow:hidden;text-overflow:ellipsis;}
+#oppBoard{background:#1c1536;border-radius:8px;border:1px solid var(--line);}
+#oppEmote{position:absolute;top:-14px;font-size:24px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));display:none;animation:pop .3s;}
+.opp-status{font-size:10px;color:var(--candy-mint);}
+
+/* 내 이모티콘 말풍선 */
+#myEmote{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:34px;z-index:7;display:none;animation:pop .3s;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));}
+@keyframes pop{0%{transform:translateX(-50%) scale(0)}80%{transform:translateX(-50%) scale(1.2)}100%{transform:translateX(-50%) scale(1)}}
+
+/* 다음 블럭 / 정보 */
+#sidePanel{
+  position:absolute;top:6px;z-index:5;width:86px;
+  display:flex;flex-direction:column;gap:6px;align-items:center;
+}
+#sidePanel.right{right:8px;} #sidePanel.left{left:8px;}
+.side-box{background:var(--bg-panel);border:2px solid var(--line);border-radius:12px;padding:5px;width:100%;text-align:center;}
+.side-box .cap{font-size:10px;color:var(--ink-dim);}
+#nextCv{background:#241c44;border-radius:8px;}
+.stage-num{font-size:18px;color:var(--candy-sky);}
+
+/* ============================================================
+   클래식 모드: 플레이 화면 뒷벽 배경 (블럭 영역에 딱 맞게, 절대 밖으로 안 나감)
+   ============================================================ */
+#bgLayer{position:absolute;inset:3px;border-radius:11px;overflow:hidden;z-index:0;display:none;pointer-events:none;}
+#bgImg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.3; /* 클리어 전: 70% 투명 */
+  clip-path:inset(0 0 100% 0);transition:clip-path .8s cubic-bezier(.2,.9,.3,1.2),opacity .8s;filter:saturate(1.05);}
+#bgImg.complete{opacity:1;} /* 스테이지 클리어: 선명하게! */
+#bgEdge{position:absolute;left:0;right:0;height:5px;top:0;opacity:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#fff,transparent);
+  box-shadow:0 0 14px 4px rgba(255,240,180,.8);transition:top .8s cubic-bezier(.2,.9,.3,1.2),opacity .4s;}
+#board{position:relative;z-index:1;}
+
+/* ============================================================
+   위기 사이렌: 패배 임박 시 화면에 붉은 기운이 돌게
+   ============================================================ */
+#dangerVeil{position:absolute;inset:0;z-index:20;pointer-events:none;display:none;
+  background:radial-gradient(ellipse at center,transparent 45%,rgba(255,40,60,.28) 100%);
+  animation:siren 1s infinite;}
+@keyframes siren{0%,100%{opacity:.25}50%{opacity:.85}}
+#oppPanel.danger{animation:oppSiren 1s infinite;border-color:#ff6b81;}
+@keyframes oppSiren{0%,100%{box-shadow:0 8px 18px rgba(0,0,0,.4)}50%{box-shadow:0 0 18px 4px rgba(255,60,80,.8)}}
+
+/* ============================================================
+   아이템 사용 알림 배너 (누가 → 누구에게, 무슨 효과인지)
+   ============================================================ */
+#itemBanner{position:absolute;top:14%;left:50%;transform:translateX(-50%) scale(0);z-index:35;
+  background:rgba(24,17,44,.96);border:2px solid var(--candy-yellow);border-radius:18px;
+  padding:10px 18px;display:flex;align-items:center;gap:10px;max-width:92vw;
+  box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 24px rgba(255,214,107,.35);
+  transition:transform .25s cubic-bezier(.2,1.4,.4,1);pointer-events:none;}
+#itemBanner.show{transform:translateX(-50%) scale(1);}
+#itemBanner .ib-icon{font-size:34px;animation:ibSpin .6s;}
+@keyframes ibSpin{0%{transform:rotate(-180deg) scale(0)}100%{transform:rotate(0) scale(1)}}
+#itemBanner .ib-who{font-size:12px;color:var(--candy-mint);}
+#itemBanner .ib-name{font-size:16px;color:var(--candy-yellow);}
+#itemBanner .ib-desc{font-size:11px;color:var(--ink-dim);}
+/* 공격 라인 표시 (+N줄) - 상대 미니화면/내 화면 위에 */
+.hit-float{position:absolute;left:50%;top:40%;transform:translateX(-50%);z-index:9;
+  font-size:20px;color:#fff;text-shadow:0 0 8px #ff3355,0 2px 0 #000;
+  animation:hitUp 1.4s forwards;pointer-events:none;white-space:nowrap;}
+@keyframes hitUp{0%{opacity:0;transform:translate(-50%,10px) scale(.5)}20%{opacity:1;transform:translate(-50%,0) scale(1.2)}100%{opacity:0;transform:translate(-50%,-34px) scale(1)}}
+.flash-red{animation:flashR .5s;}
+@keyframes flashR{0%,100%{filter:none}50%{filter:brightness(1.4) drop-shadow(0 0 14px #ff3355)}}
+.flash-good{animation:flashG .5s;}
+@keyframes flashG{0%,100%{filter:none}50%{filter:brightness(1.4) drop-shadow(0 0 14px #6fe8cf)}}
+
+/* ============================================================
+   드래그 가능한 독(dock): 갓차 / 보유 아이템 / 공격 - 절대 겹치지 않는 기본 위치 + 자유 배치
+   ============================================================ */
+.dock{position:absolute;z-index:6;display:none;flex-direction:column;align-items:center;gap:4px;touch-action:none;}
+.dock-handle{font-size:10px;color:var(--ink-dim);background:rgba(36,28,68,.9);border:1px solid var(--line);
+  border-radius:999px;padding:2px 10px;cursor:grab;white-space:nowrap;}
+.dock-handle::before{content:"⠿ ";color:var(--candy-yellow);}
+.dock.dragging{opacity:.85;z-index:25;}
+.dock.dragging .dock-handle{cursor:grabbing;border-color:var(--candy-yellow);}
+
+/* ---------- 갓차: 로또 추첨기 디자인 ---------- */
+#gachaMachine{width:74px;height:96px;position:relative;cursor:pointer;transition:transform .1s;}
+#gachaMachine:active{transform:scale(.95);}
+.lotto-globe{position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:64px;height:64px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.55),rgba(255,255,255,.08) 45%,rgba(120,90,200,.25));
+  border:3px solid #ffd0e0;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 -6px 12px rgba(0,0,0,.2);overflow:hidden;}
+/* 뒤섞이는 공들 (대기 구슬은 무엇인지 보이지 않음 - 회색 ? 없이 그냥 섞임) */
+.mix-ball{position:absolute;width:14px;height:14px;border-radius:50%;
+  box-shadow:inset -2px -2px 0 rgba(0,0,0,.2),inset 2px 2px 0 rgba(255,255,255,.5);}
+.mb1{background:#b9aee0;left:10px;top:30px;animation:mix1 1.6s infinite ease-in-out;}
+.mb2{background:#9d90cc;left:32px;top:22px;animation:mix2 1.9s infinite ease-in-out;}
+.mb3{background:#8e7fb8;left:22px;top:38px;animation:mix3 1.4s infinite ease-in-out;}
+@keyframes mix1{0%,100%{transform:translate(0,0)}50%{transform:translate(14px,-12px) rotate(120deg)}}
+@keyframes mix2{0%,100%{transform:translate(0,0)}50%{transform:translate(-12px,10px) rotate(-100deg)}}
+@keyframes mix3{0%,100%{transform:translate(0,0)}50%{transform:translate(8px,-14px) rotate(80deg)}}
+#gachaMachine.spinning .mix-ball{animation-duration:.25s !important;}
+.lotto-base{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:70px;height:34px;border-radius:10px;
+  background:linear-gradient(180deg,#ff9dbd,#e86a99);border:2px solid #ffd0e0;box-shadow:0 4px 0 #a13a63;}
+.lotto-tube{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+  width:20px;height:16px;background:rgba(255,255,255,.25);border:2px solid #ffd0e0;border-top:none;border-radius:0 0 8px 8px;}
+/* 지금 뽑을 수 있는 구슬 (유일하게 보이는 구슬) */
+#capNow{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
+  width:22px;height:22px;border-radius:50%;z-index:2;
+  box-shadow:inset -3px -3px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.55),0 0 8px rgba(255,255,255,.4);
+  animation:capBob 1.8s infinite ease-in-out;}
+@keyframes capBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-3px)}}
+#gachaMachine.spinning{animation:wobble .5s;}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-4deg)}}
+#gachaCost{font-size:11px;background:#2b2249;border:1px solid var(--line);border-radius:999px;padding:2px 8px;}
+#gachaCost b{color:var(--candy-yellow);}
+/* 뽑기 결과 말풍선 (팝업 없음, 게임 안 멈춤) */
+#gachaBubble{position:absolute;top:100%;margin-top:8px;left:50%;transform:translateX(-50%) scale(0);
+  background:rgba(24,17,44,.97);border:2px solid var(--candy-yellow);border-radius:12px;
+  padding:6px 10px;font-size:12px;white-space:nowrap;z-index:8;pointer-events:none;
+  transition:transform .25s cubic-bezier(.2,1.4,.4,1);box-shadow:0 6px 16px rgba(0,0,0,.45);}
+#gachaBubble.show{transform:translateX(-50%) scale(1);}
+#gachaBubble::before{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+  border:8px solid transparent;border-bottom-color:var(--candy-yellow);border-top:none;}
+/* 갓차 하단: 뽑기(Q) / 사용(E) 버튼 - 키 변경 가능, 터치 클릭 가능 */
+.ga-row{display:flex;gap:5px;}
+.ga-btn{display:flex;align-items:center;gap:4px;padding:6px 9px;border-radius:10px;font-size:12px;
+  background:linear-gradient(180deg,#4b3f80,#372c62);border:2px solid #6b5daa;color:#e9defc;box-shadow:0 3px 0 #201740;}
+.ga-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #201740;}
+.ga-btn.pink{background:linear-gradient(180deg,#ff9fbe,#f76fa0);border-color:#ffd0e0;color:#4d1230;box-shadow:0 3px 0 #a13a63;}
+.ga-btn.pink:active{box-shadow:0 1px 0 #a13a63;}
+.ga-btn .kbd{position:static;transform:none;font-size:9px;background:rgba(0,0,0,.3);color:rgba(255,255,255,.85);
+  border-radius:5px;padding:0 4px;line-height:12px;font-family:"Baloo 2",monospace;}
+.ga-btn.pink .kbd{background:rgba(255,255,255,.45);color:rgba(0,0,0,.6);}
+/* 아이템별 상대 화면 이펙트 */
+#oppPanel.spinFx{animation:spinP .8s;}
+@keyframes spinP{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+#oppPanel.zapFx{animation:zapF .6s;}
+@keyframes zapF{0%,100%{filter:none}25%,75%{filter:brightness(2.2) drop-shadow(0 0 16px #ffe066)}50%{filter:brightness(.6)}}
+#oppFog{position:absolute;inset:0;border-radius:12px;z-index:3;display:none;align-items:center;justify-content:center;
+  background:rgba(200,205,225,.55);backdrop-filter:blur(2px);font-size:30px;}
+#oppFog.on{display:flex;animation:fogPuff .6s;}
+@keyframes fogPuff{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}
+/* 터치 제스처: 게임 영역에서 스와이프/탭 */
+.game-area{touch-action:none;}
+/* 🔮 미래 예측 캡슐 (🍬슈가블럭스): UI 최하단 중앙의 유리 구체 - 다음 블럭이 담겨 있음 */
+#capsule{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:9;
+  display:none;flex-direction:column;align-items:center;gap:2px;pointer-events:none;}
+.cap-glass{width:60px;height:60px;border-radius:50%;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.7),rgba(255,255,255,.1) 45%,rgba(160,120,230,.3));
+  border:2px solid rgba(255,255,255,.6);
+  box-shadow:0 6px 16px rgba(0,0,0,.45),inset 0 -8px 14px rgba(120,80,200,.3),0 0 14px rgba(255,158,198,.35);
+  display:flex;align-items:center;justify-content:center;animation:capFloat 2.4s infinite ease-in-out;}
+.cap-glass::after{content:"";position:absolute;top:8%;left:16%;width:34%;height:20%;border-radius:50%;
+  background:rgba(255,255,255,.65);transform:rotate(-24deg);}
+@keyframes capFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.cap-label{font-size:9px;color:var(--ink-dim);background:rgba(36,28,68,.85);border-radius:999px;padding:1px 8px;}
+/* 🧩 블럭 공방 */
+#beChips{display:flex;gap:6px;overflow-x:auto;width:100%;padding:4px 0;}
+.be-chip{flex:0 0 auto;width:52px;height:60px;border-radius:12px;background:#241c44;border:2px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:10px;color:var(--ink-dim);}
+.be-chip.sel{border-color:var(--candy-yellow);background:var(--bg-panel2);}
+.be-chip canvas{width:36px;height:36px;}
+.be-chip.newp{font-size:20px;color:var(--candy-mint);border-style:dashed;}
+#beGrid{display:grid;grid-template-columns:repeat(5,34px);grid-template-rows:repeat(5,34px);gap:4px;}
+.be-cell{border-radius:8px;background:#241c44;border:2px solid var(--line);cursor:pointer;transition:transform .06s;}
+.be-cell:active{transform:scale(.9);}
+.be-cell.on{border-color:rgba(255,255,255,.6);box-shadow:inset 0 -5px 8px rgba(0,0,0,.25),inset 0 3px 5px rgba(255,255,255,.35);}
+.be-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;}
+.be-row input[type=color]{width:44px;height:32px;border:none;border-radius:8px;background:#241c44;padding:2px;cursor:pointer;}
+.be-row input[type=range]{accent-color:var(--candy-pink);width:130px;}
+#bePct{color:var(--candy-yellow);min-width:52px;text-align:right;}
+
+/* ---------- 보유 아이템 (가로 배치) ---------- */
+#invRow{display:flex;flex-direction:row;gap:5px;}
+.inv-slot{width:44px;height:44px;border-radius:12px;background:var(--bg-panel);
+  border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;
+  font-size:22px;box-shadow:var(--btn-shadow);}
+.inv-slot.full{border-style:solid;border-color:var(--candy-yellow);background:var(--bg-panel2);cursor:pointer;}
+.inv-slot.full:active{transform:scale(.9);}
+.inv-slot.locked{border-style:solid;border-color:#4a3f7a;background:#241c44;color:#6b5daa;font-size:16px;cursor:pointer;}
+
+/* ---------- 공격 독 ---------- */
+#atkBtn{width:56px;height:56px;border-radius:50%;font-size:22px;
+  background:radial-gradient(circle at 35% 30%,#ff9d9d,#ff5470);
+  border:2px solid #ffc2cd;box-shadow:0 5px 0 #a12744;position:relative;}
+#atkBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #a12744;}
+#atkBtn .cnt{position:absolute;top:-6px;right:-6px;background:#fff;color:#c2185b;font-size:12px;border-radius:999px;min-width:20px;padding:1px 5px;}
+#atkBtn.pulse{animation:pulseA 1s infinite;}
+@keyframes pulseA{0%,100%{box-shadow:0 5px 0 #a12744,0 0 0 0 rgba(255,84,112,.6)}50%{box-shadow:0 5px 0 #a12744,0 0 0 12px rgba(255,84,112,0)}}
+#incoming{width:8px;height:80px;border-radius:6px;background:#2b2249;border:1px solid var(--line);overflow:hidden;position:relative;display:none;}
+#incomingFill{position:absolute;bottom:0;width:100%;height:0;background:linear-gradient(180deg,#ff8fb1,#ff5470);transition:height .2s;}
+
+/* ============================================================
+   터치 컨트롤 (설정으로 위치/크기 조절 가능)
+   ============================================================ */
+#controls{position:absolute;inset:0;z-index:10;pointer-events:none;}
+.ctl-cluster{position:absolute;pointer-events:auto;transform-origin:center;}
+.ctl-btn{
+  position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#4b3f80,#372c62);border:2px solid #6b5daa;
+  color:#e9defc;box-shadow:0 5px 0 #201740,0 6px 14px rgba(0,0,0,.4);
+  font-size:26px;touch-action:none;
+}
+.ctl-btn:active,.ctl-btn.pressed{transform:translateY(3px);box-shadow:0 2px 0 #201740;background:linear-gradient(180deg,#5a4c99,#43377a);}
+.ctl-btn.accent{background:linear-gradient(180deg,#ff9fbe,#f76fa0);border-color:#ffd0e0;color:#4d1230;box-shadow:0 5px 0 #a13a63,0 6px 14px rgba(0,0,0,.4);}
+.ctl-btn.accent:active,.ctl-btn.accent.pressed{box-shadow:0 2px 0 #a13a63;}
+.ctl-btn.mint{background:linear-gradient(180deg,#8df0da,#4cd3b6);border-color:#c8fff1;color:#0c4436;box-shadow:0 5px 0 #1d7a63;}
+.ctl-btn.mint:active,.ctl-btn.mint.pressed{box-shadow:0 2px 0 #1d7a63;}
+.ctl-btn.quick{background:linear-gradient(180deg,#ffd97a,#f7b23c);border-color:#ffe9b8;color:#4d3208;box-shadow:0 5px 0 #a8721c,0 6px 14px rgba(0,0,0,.4);}
+.ctl-btn.quick:active,.ctl-btn.quick.pressed{box-shadow:0 2px 0 #a8721c;background:linear-gradient(180deg,#f5c65e,#e09f2c);}
+.ctl-btn.quick .kbd{color:rgba(0,0,0,.55);background:rgba(255,255,255,.4);}
+/* 버튼 안 키보드 키 표시 (버튼 구역 안에만, 세련된 작은 폰트) */
+.ctl-btn .kbd{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);
+  font-size:9px;letter-spacing:.5px;color:rgba(255,255,255,.75);
+  background:rgba(0,0,0,.28);border-radius:6px;padding:0 5px;line-height:13px;
+  font-family:"Baloo 2",monospace;pointer-events:none;max-width:86%;overflow:hidden;}
+.ctl-btn.accent .kbd,.ctl-btn.mint .kbd{color:rgba(0,0,0,.55);background:rgba(255,255,255,.4);}
+
+/* 설정(레이아웃 편집) 모드 */
+body.editing .ctl-cluster{outline:2px dashed var(--candy-yellow);outline-offset:6px;border-radius:16px;}
+body.editing .ctl-cluster::after{
+  content:attr(data-hint);position:absolute;top:-24px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:var(--candy-yellow);white-space:nowrap;
+}
+#editBar{
+  position:absolute;top:0;left:0;right:0;z-index:40;display:none;gap:8px;align-items:center;
+  background:rgba(24,17,44,.95);border-bottom:2px solid var(--line);padding:10px 12px;flex-wrap:wrap;
+}
+body.editing #editBar{display:flex;}
+#editBar label{font-size:12px;color:var(--ink-dim);}
+#editBar input[type=range]{width:120px;accent-color:var(--candy-pink);}
+
+/* ============================================================
+   이모티콘: HUD의 😀 버튼 → 팝오버 (다른 UI와 절대 겹치지 않음)
+   ============================================================ */
+#emotePop{position:absolute;top:52px;right:10px;z-index:45;display:none;gap:6px;
+  background:rgba(24,17,44,.97);border:2px solid var(--line);border-radius:999px;padding:6px 8px;
+  box-shadow:0 10px 24px rgba(0,0,0,.5);}
+#emotePop.on{display:flex;}
+.emote-btn{width:38px;height:38px;border-radius:50%;background:var(--bg-panel2);border:2px solid var(--line);font-size:18px;}
+.emote-btn:active{transform:scale(.88);}
+
+/* 스테이지 진행 바 (클리어 규칙: 10줄 = 1스테이지) */
+#stageBar{width:100%;height:8px;border-radius:6px;background:#241c44;border:1px solid var(--line);overflow:hidden;margin-top:3px;}
+#stageFill{height:100%;width:0;background:linear-gradient(90deg,var(--candy-sky),var(--candy-mint));transition:width .3s;}
+.stage-rule{font-size:9px;color:var(--ink-dim);margin-top:2px;}
+
+/* 메뉴: 언어 선택 & 아이템 도감 */
+.lang-row{display:flex;gap:8px;justify-content:center;}
+.lang-row button{padding:8px 12px;border-radius:12px;background:var(--bg-panel);border:2px solid var(--line);font-size:14px;box-shadow:var(--btn-shadow);}
+.lang-row button.sel{background:linear-gradient(180deg,var(--candy-sky),#4f9fe8);border-color:#cfe8ff;color:#08283f;}
+#itemGuide{display:none;flex-wrap:wrap;gap:5px;background:#2b2249;border-radius:12px;padding:8px;
+  max-height:96px;overflow-y:auto;} /* 간략 도감: 스크롤로 화면 절약 */
+#itemGuide.on{display:flex;}
+.ig-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;background:#332a55;
+  border:1px solid var(--line);border-radius:999px;padding:3px 8px;white-space:nowrap;}
+.ig-chip .ig-i{font-size:14px;}
+#itemDetailBtn{display:none;align-self:flex-start;font-size:11px;padding:6px 10px;border-radius:999px;
+  background:var(--bg-panel2);border:1px solid var(--line);box-shadow:var(--btn-shadow);}
+#itemDetailBtn.on{display:inline-block;}
+/* 상세 설명 팝업 행 */
+.idt-row{width:100%;display:flex;align-items:flex-start;gap:10px;font-size:13px;text-align:left;}
+.idt-row .idt-i{font-size:24px;width:30px;text-align:center;}
+.idt-row .idt-n{color:var(--candy-yellow);white-space:nowrap;}
+.idt-row .idt-d{color:var(--ink-dim);line-height:1.4;}
+
+/* 설정: 키 변경 행 */
+.key-row{width:100%;display:flex;align-items:center;justify-content:space-between;font-size:13px;}
+.key-btn{min-width:86px;padding:7px 10px;border-radius:10px;background:#241c44;border:2px solid var(--line);font-size:12px;font-family:"Baloo 2",monospace;letter-spacing:1px;}
+.key-btn.listen{border-color:var(--candy-yellow);color:var(--candy-yellow);animation:pulseA 1s infinite;}
+
+/* ============================================================
+   오버레이 (일시정지 / 게임오버 / 설정 / 갓차결과)
+   ============================================================ */
+.overlay{
+  position:absolute;inset:0;background:rgba(18,12,34,.82);z-index:50;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px;
+  backdrop-filter:blur(3px);
+}
+.overlay.on{display:flex;}
+.ov-card{
+  background:var(--bg-panel);border:2px solid var(--line);border-radius:22px;
+  padding:22px;width:min(400px,94vw);display:flex;flex-direction:column;gap:12px;align-items:center;
+  box-shadow:0 16px 40px rgba(0,0,0,.5);max-height:86vh;overflow-y:auto;
+}
+.ov-title{font-size:26px;}
+.ov-sub{font-size:14px;color:var(--ink-dim);text-align:center;line-height:1.6;}
+.countdown{font-size:52px;color:var(--candy-yellow);text-shadow:0 4px 0 #1a1330;}
+.ov-row{display:flex;gap:10px;width:100%;}
+.ov-btn{flex:1;padding:14px;border-radius:14px;font-size:16px;background:var(--bg-panel2);border:2px solid var(--line);box-shadow:var(--btn-shadow);}
+.ov-btn.primary{background:linear-gradient(180deg,var(--candy-mint),#3fc9aa);color:#083c30;border-color:#bdfff0;}
+.ov-btn:active{transform:translateY(2px);box-shadow:none;}
+.set-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;}
+.set-row input[type=text]{
+  background:#241c44;border:2px solid var(--line);border-radius:10px;color:var(--ink);
+  padding:8px 10px;font-family:inherit;width:150px;font-size:14px;
+}
+.set-row input[type=range]{accent-color:var(--candy-pink);width:140px;}
+.set-row select{background:#241c44;color:var(--ink);border:2px solid var(--line);border-radius:10px;padding:8px;font-family:inherit;}
+
+/* 갓차 결과 카드 */
+#gachaResult .item-big{font-size:64px;animation:itemPop .5s;}
+@keyframes itemPop{0%{transform:scale(0) rotate(-30deg)}70%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1)}}
+#gachaResult .item-name{font-size:20px;color:var(--candy-yellow);}
+.rarity{font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid;}
+.rarity.r1{color:#bfe3ff;border-color:#bfe3ff;} .rarity.r2{color:#c39bff;border-color:#c39bff;} .rarity.r3{color:#ffd66b;border-color:#ffd66b;text-shadow:0 0 8px rgba(255,214,107,.7);}
+
+/* 카운트다운(게임 시작 3,2,1) */
+#startCount{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;font-size:90px;text-shadow:0 6px 0 #1a1330;pointer-events:none;}
+
+/* 토스트 */
+#toast{
+  position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:60;
+  background:rgba(24,17,44,.95);border:2px solid var(--candy-yellow);border-radius:999px;
+  padding:8px 18px;font-size:14px;display:none;white-space:nowrap;
+}
+@media (min-width:700px){
+  .hud{padding:10px 24px;}
+  #oppPanel{width:140px;}
+}
+</style>
+</head>
+<body>
+<div class="bg-stars" id="bgStars"></div>
+
+<!-- ============ 메뉴 화면 ============ -->
+<div class="screen on" id="menuScreen">
+  <div class="lang-row" id="styleRow" style="margin-bottom:2px">
+    <button data-st="tetris" class="sel" data-i18n="styleTetris">🧱 테트리스 모드</button>
+    <button data-st="buster" data-i18n="styleBuster">🍬 슈가블럭스 모드</button>
+  </div>
+  <div class="logo"><span class="star">⭐</span> <span data-i18n="title">별사탕 테트리스</span></div>
+  <div class="tagline" data-i18n="tagline">귀엽게 쌓고, 화려하게 터뜨리자!</div>
+
+  <div class="lang-row" id="langRow">
+    <button data-l="ko" class="sel">🇰🇷 한국어</button>
+    <button data-l="en">🇺🇸 English</button>
+    <button data-l="fr">🇫🇷 Français</button>
+    <button data-l="zh">🇨🇳 中文</button>
+  </div>
+
+  <div class="menu-card">
+    <div class="menu-label">👥 <span data-i18n="mPlayers">대전 방식</span></div>
+    <div class="seg" id="segPlayers">
+      <button data-v="solo" class="sel" data-i18n="pSolo">혼자하기</button>
+      <button data-v="vs1">1 : 1</button>
+      <button data-v="vsN" data-i18n="pMulti">1 : 다수 (최대5)</button>
+    </div>
+    <div class="menu-label">🔌 <span data-i18n="mOpp">상대</span></div>
+    <div class="seg" id="segNet">
+      <button data-v="cpu" class="sel" data-i18n="oCpu">컴퓨터</button>
+      <button data-v="online"><span data-i18n="oOnline">온라인</span><span class="soon">🌐 NEW!</span></button>
+    </div>
+    <div class="menu-label">🎮 <span data-i18n="mMode">게임 모드</span></div>
+    <div class="seg" id="segMode">
+      <button data-v="classic" class="sel" data-i18n="mdClassic">클래식</button>
+      <button data-v="fight" data-i18n="mdFight">파이트</button>
+      <button data-v="fightItem" data-i18n="mdFightItem">파이트+아이템</button>
+    </div>
+    <div class="mode-desc" id="modeDesc"></div>
+    <div id="itemGuide"></div>
+    <button id="itemDetailBtn" data-i18n="itemDetail">📖 아이템 상세 설명</button>
+  </div>
+
+  <button class="play-btn" id="playBtn" data-i18n="play">게임 시작 ▶</button>
+  <div class="menu-foot">
+    <button class="small-btn" id="menuSettingsBtn">⚙ <span data-i18n="settings">설정</span></button>
+    <button class="small-btn" id="menuLayoutBtn">🎛 <span data-i18n="layoutBtn">버튼 배치</span></button>
+    <button class="small-btn" id="collectionBtn">🖼 <span data-i18n="collection">배경 도감</span></button>
+  </div>
+  <div class="small-btn" id="myNamePill" style="max-width:94vw;overflow:hidden">👤 ...</div>
+  <div id="questCard" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;max-width:94vw"></div>
+</div>
+
+<!-- ============ 게임 화면 ============ -->
+<div class="screen" id="gameScreen">
+  <div class="hud">
+    <div class="pill" id="starPill">⭐ <b id="hudStars">0</b></div>
+    <div class="pill" id="hudScore"><span data-i18n="score">점수</span> <b>0</b></div>
+    <div class="pill" id="hudLines"><span data-i18n="lines">줄</span> <b>0</b></div>
+    <button class="pill" id="sndBtn">🔊</button>
+    <button class="pill" id="emoteToggle">😀</button>
+    <button class="pill" id="pauseBtn">⏸</button>
+  </div>
+  <div id="emotePop">
+    <button class="emote-btn" data-e="😀">😀</button>
+    <button class="emote-btn" data-e="👋">👋</button>
+    <button class="emote-btn" data-e="😎">😎</button>
+    <button class="emote-btn" data-e="😱">😱</button>
+    <button class="emote-btn" data-e="🔥">🔥</button>
+  </div>
+
+  <div class="game-area">
+    <div class="board-wrap" id="boardWrap">
+      <div id="bgLayer"><div id="bgImg"></div><div id="bgEdge"></div></div>
+      <canvas id="board"></canvas>
+      <canvas id="fx"></canvas>
+      <div id="myEmote"></div>
+    </div>
+
+    <!-- 상대 미니보드 -->
+    <div id="oppPanel" class="right">
+      <div class="opp-name" id="oppName">컴퓨터</div>
+      <canvas id="oppBoard" width="80" height="160"></canvas>
+      <div id="oppFog">🌫️</div>
+      <div class="opp-status" id="oppStatus"></div>
+      <div id="oppEmote"></div>
+    </div>
+
+    <!-- 다음블럭/스테이지 (클리어 규칙: 10줄) -->
+    <div id="sidePanel" class="left">
+      <div class="side-box" id="nextBox"><div class="cap" data-i18n="next">다음</div><canvas id="nextCv" width="70" height="52"></canvas></div>
+      <div class="side-box" id="stageBox">
+        <div class="cap" data-i18n="stage">스테이지</div><div class="stage-num" id="stageNum">1</div>
+        <div id="stageBar"><div id="stageFill"></div></div>
+        <div class="stage-rule" id="stageRule">0 / 10</div>
+      </div>
+    </div>
+
+    <!-- 갓차 (로또 추첨기) - 드래그로 위치 이동 가능 -->
+    <div class="dock" id="gachaDock">
+      <div class="dock-handle" data-i18n="gacha">뽑기</div>
+      <div id="gachaMachine">
+        <div class="lotto-globe"><div class="mix-ball mb1"></div><div class="mix-ball mb2"></div><div class="mix-ball mb3"></div></div>
+        <div class="lotto-tube"></div>
+        <div class="lotto-base"></div>
+        <div id="capNow"></div>
+      </div>
+      <div id="gachaCost">⭐<b>5</b></div>
+      <div class="ga-row">
+        <button class="ga-btn pink" id="drawBtn"><span data-i18n="gDraw">뽑기</span><span class="kbd" data-k="draw"></span></button>
+        <button class="ga-btn" id="useBtn"><span data-i18n="gUse">사용</span><span class="kbd" data-k="use"></span></button>
+      </div>
+      <div id="gachaBubble"></div>
+    </div>
+
+    <!-- 보유 아이템 - 드래그로 위치 이동 가능 -->
+    <div class="dock" id="invDock">
+      <div class="dock-handle" data-i18n="ownedItems">보유 아이템</div>
+      <div id="invRow">
+        <div class="inv-slot" data-i="0"></div>
+        <div class="inv-slot" data-i="1"></div>
+        <div class="inv-slot" data-i="2"></div>
+        <div class="inv-slot" data-i="3"></div>
+        <div class="inv-slot" data-i="4"></div>
+      </div>
+    </div>
+
+    <!-- 공격 - 드래그로 위치 이동 가능 -->
+    <div class="dock" id="attackDock">
+      <div class="dock-handle" data-i18n="attack">공격</div>
+      <button id="atkBtn">⚔️<span class="cnt" id="atkCnt">0</span></button>
+      <div id="incoming"><div id="incomingFill"></div></div>
+    </div>
+
+    <div id="startCount"></div>
+
+    <!-- 🔮 미래 예측 캡슐 (슈가블럭스 전용, 히든모드는 기존 '다음' 창 유지) -->
+    <div id="capsule">
+      <div class="cap-glass"><canvas id="capsuleCv" width="52" height="52"></canvas></div>
+      <div class="cap-label" data-i18n="capsuleT">미래 캡슐</div>
+    </div>
+  </div>
+
+  <!-- 아이템 사용 알림 배너 -->
+  <div id="itemBanner">
+    <div class="ib-icon" id="ibIcon">💣</div>
+    <div><div class="ib-who" id="ibWho"></div><div class="ib-name" id="ibName"></div><div class="ib-desc" id="ibDesc"></div></div>
+  </div>
+  <!-- 위기 사이렌 -->
+  <div id="dangerVeil"></div>
+
+  <!-- 터치 컨트롤 (버튼 안에 설정된 키가 표시됨) -->
+  <div id="controls">
+    <!-- 왼쪽: ↺ ↻ 위 / ⏪ ⤓ ⏩ 가운데(스페이스 좌우) / ⏬ 아래 - ⚡퀵무브는 키보드 Z·X·C와 동일 동작 -->
+    <div class="ctl-cluster" id="clusterL">
+      <button class="ctl-btn mint" id="btnRotL">↺<span class="kbd" data-k="rotL"></span></button>
+      <button class="ctl-btn mint" id="btnRotR">↻<span class="kbd" data-k="rotR"></span></button>
+      <button class="ctl-btn quick" id="btnQuickL">⏪<span class="kbd" data-k="quickL"></span></button>
+      <button class="ctl-btn accent" id="btnHard">⤓<span class="kbd" data-k="hard"></span></button>
+      <button class="ctl-btn quick" id="btnQuickR">⏩<span class="kbd" data-k="quickR"></span></button>
+      <button class="ctl-btn quick" id="btnQuickD">⏬<span class="kbd" data-k="quickD"></span></button>
+    </div>
+    <!-- 오른쪽: ▲ 위 / ◀ ▼ ▶ 아래 -->
+    <div class="ctl-cluster" id="clusterR">
+      <button class="ctl-btn" id="btnUp">▲<span class="kbd" data-k="up"></span></button>
+      <button class="ctl-btn" id="btnLeft">◀<span class="kbd" data-k="left"></span></button>
+      <button class="ctl-btn" id="btnDown">▼<span class="kbd" data-k="down"></span></button>
+      <button class="ctl-btn" id="btnRight">▶<span class="kbd" data-k="right"></span></button>
+    </div>
+  </div>
+
+  <!-- 버튼 배치 편집 바 -->
+  <div id="editBar">
+    <span style="font-size:13px" data-i18n="editTitle">🎛 버튼 배치 편집</span>
+    <label><span data-i18n="editL">왼쪽 크기</span> <input type="range" id="sizeL" min="40" max="90" value="58"></label>
+    <label><span data-i18n="editR">오른쪽 크기</span> <input type="range" id="sizeR" min="40" max="90" value="58"></label>
+    <button class="small-btn" id="resetLayoutBtn" data-i18n="reset">초기화</button>
+    <button class="small-btn" id="doneEditBtn" style="background:var(--candy-mint);color:#083c30" data-i18n="done">✔ 완료</button>
+  </div>
+</div>
+
+<!-- ============ 오버레이들 ============ -->
+<div class="overlay" id="pauseOv">
+  <div class="ov-card">
+    <div class="ov-title">⏸ <span data-i18n="paused">일시정지</span></div>
+    <div class="ov-row">
+      <button class="ov-btn primary" id="resumeBtn" data-i18n="resume">계속하기</button>
+      <button class="ov-btn" id="quitBtn" data-i18n="quit">나가기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overOv">
+  <div class="ov-card">
+    <div class="ov-title" id="overTitle">게임 종료</div>
+    <div class="ov-sub" id="overSub"></div>
+    <div class="countdown" id="overCount">5</div>
+    <div class="ov-row">
+      <button class="ov-btn primary" id="rematchBtn">🔄 <span data-i18n="rematch">재대결</span></button>
+      <button class="ov-btn" id="leaveBtn">🚪 <span data-i18n="leave">나가기</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOv">
+  <div class="ov-card">
+    <div class="ov-title">⚙ <span data-i18n="settings">설정</span></div>
+    <div class="set-row"><span data-i18n="myName">내 이름</span><input type="text" id="nameInput" maxlength="10"></div>
+    <div class="set-row"><span data-i18n="oppPos">상대 화면 위치</span>
+      <select id="oppPosSel"><option value="right" data-i18n="posR">우측 상단</option><option value="left" data-i18n="posL">좌측 상단</option></select>
+    </div>
+    <div class="set-row"><span data-i18n="dasLabel">좌우 꾹 누름 반응(ms)</span><input type="range" id="dasRange" min="80" max="400" step="10"></div>
+    <div class="set-row"><span style="color:var(--ink-dim);font-size:12px" id="dasVal"></span></div>
+    <div class="set-row"><span data-i18n="swipeLabel">터치 스와이프 민감도(px)</span><input type="range" id="swipeRange" min="14" max="60" step="2"></div>
+    <div class="set-row"><span style="color:var(--ink-dim);font-size:12px" id="swipeVal"></span></div>
+    <div class="set-row"><span data-i18n="quickCellsLabel">⚡ 퀵무브 이동 칸 수</span><input type="range" id="quickCellsRange" min="1" max="6" step="1"></div>
+    <div class="set-row"><span style="color:var(--ink-dim);font-size:12px" id="quickCellsVal"></span></div>
+    <div class="set-row"><span data-i18n="quickSpeedLabel">⚡ 퀵무브 속도(ms/칸)</span><input type="range" id="quickSpeedRange" min="0" max="120" step="10"></div>
+    <div class="set-row"><span style="color:var(--ink-dim);font-size:12px" id="quickSpeedVal"></span></div>
+    <div class="set-row" id="beRow" style="display:none"><span data-i18n="beBtn">🧩 블럭 공방</span>
+      <button class="ov-btn" id="blockEditBtn" style="flex:0 0 auto;padding:9px 16px;font-size:13px" data-i18n="beOpen">열기</button></div>
+    <div class="menu-label" style="width:100%">⌨ <span data-i18n="keySet">키보드 키 변경 (버튼에 표시돼요)</span></div>
+    <div id="keyRows" style="width:100%;display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="ov-row">
+      <button class="ov-btn" id="layoutFromSettings">🎛 <span data-i18n="layoutEdit">버튼 배치 편집</span></button>
+      <button class="ov-btn primary" id="closeSettingsBtn" data-i18n="saveClose">저장 & 닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="itemDetailOv">
+  <div class="ov-card">
+    <div class="ov-title">📖 <span data-i18n="itemDetailTitle">아이템 도감</span></div>
+    <div id="idtList" style="width:100%;display:flex;flex-direction:column;gap:10px;max-height:56vh;overflow-y:auto;"></div>
+    <button class="ov-btn primary" id="idtClose" style="width:100%" data-i18n="close">닫기</button>
+  </div>
+</div>
+
+<div class="overlay" id="lobbyOv">
+  <div class="ov-card">
+    <div class="ov-title">🌐 <span data-i18n="lobby">온라인 로비</span></div>
+    <div class="set-row"><span data-i18n="serverAddr">서버 주소</span>
+      <input type="text" id="serverInput" style="width:190px" placeholder="ws://localhost:8765"></div>
+    <div class="ov-row">
+      <button class="ov-btn primary" id="connectBtn" data-i18n="connect">접속</button>
+      <button class="ov-btn" id="lobbyCloseBtn" data-i18n="close">닫기</button>
+    </div>
+    <div class="ov-sub" id="lobbyStatus"></div>
+    <div id="lobbyMain" style="width:100%;display:none;flex-direction:column;gap:10px;">
+      <div class="set-row"><input type="text" id="roomNameInput" maxlength="14" style="flex:1" placeholder="⭐">
+        <button class="ov-btn primary" id="createRoomBtn" style="flex:0 0 auto" data-i18n="createRoom">방 만들기</button></div>
+      <div class="menu-label"><span data-i18n="roomListT">방 목록 (탭하여 입장)</span>
+        <button class="small-btn" id="refreshBtn" style="padding:4px 10px;font-size:11px" data-i18n="refresh">새로고침</button>
+        <button class="small-btn" id="boardBtn" style="padding:4px 10px;font-size:11px">🏆 <span data-i18n="board">주간 랭킹</span></button></div>
+      <div id="roomList" style="display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="blockEditorOv">
+  <div class="ov-card">
+    <div class="ov-title">🧩 <span data-i18n="beTitle">블럭 공방</span></div>
+    <div class="ov-sub" data-i18n="beHint">칸을 클릭해 모양을 만들고 저장하세요.</div>
+    <div id="beChips"></div>
+    <div id="beGrid"></div>
+    <div class="be-row"><span data-i18n="beColor">색상</span><input type="color" id="beColor" value="#ff9ec6"></div>
+    <div class="be-row"><span data-i18n="beWeight">등장 확률</span>
+      <span style="display:flex;align-items:center;gap:6px"><input type="range" id="beWeight" min="1" max="30" value="10"><span id="bePct">-</span></span></div>
+    <div class="ov-row">
+      <button class="ov-btn" id="beDup" data-i18n="beDup">복제</button>
+      <button class="ov-btn" id="beDel" data-i18n="beDel">삭제</button>
+      <button class="ov-btn" id="beReset" data-i18n="beReset">기본값 복원</button>
+    </div>
+    <div class="ov-row">
+      <button class="ov-btn primary" id="beSave" data-i18n="beSave">💾 저장 & 적용</button>
+      <button class="ov-btn" id="beClose" data-i18n="close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="collectionOv">
+  <div class="ov-card">
+    <div class="ov-title">🖼 <span data-i18n="collection">배경 도감</span> <span id="colCount" style="font-size:14px;color:var(--candy-yellow)"></span></div>
+    <div id="colGrid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:56vh;overflow-y:auto;"></div>
+    <button class="ov-btn primary" id="colClose" style="width:100%" data-i18n="close">닫기</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+"use strict";
+/* ============================================================
+   0. 유틸 & 안전 저장소 (localStorage 불가 환경에서도 동작)
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rand(a,b+1));
+const memStore={};
+const store={
+  get(k,d){ try{const v=localStorage.getItem(k); return v==null?(k in memStore?memStore[k]:d):JSON.parse(v);}catch(e){return k in memStore?memStore[k]:d;} },
+  set(k,v){ memStore[k]=v; try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+};
+function toast(msg,t=1600){const el=$("toast");el.textContent=msg;el.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display="none",t);}
+
+/* ============================================================
+   0-B. 사운드 시스템
+   ─ [관리자 안내] ────────────────────────────────────────────
+   · 아래 SOUND_FILES 의 원하는 이름에 mp3/wav 주소를 넣으면
+     내장 합성음 대신 그 파일이 재생됩니다. (교체가 아주 쉬움!)
+     예) sfx_lock:"https://내저장소.com/sounds/lock.mp3"
+   · 비워두면("") Claude가 만든 내장 합성 사운드가 재생됩니다.
+   ──────────────────────────────────────────────────────────── */
+const SOUND_FILES={
+  sfx_lock:"",        // 블록을 놓을 때 (톡!)
+  sfx_harddrop:"",    // 즉시 낙하로 꽂힐 때 (슝-쿵!)
+  sfx_rotate:"",      // 블록 회전 (틱)
+  sfx_line1:"",       // 1줄 지울 때 (딩!)
+  sfx_line2:"",       // 2줄 지울 때 (딩동!)
+  sfx_line3:"",       // 3줄 지울 때 (딩동댕!)
+  sfx_tetris:"",      // 4줄(테트리스)! 팡파레
+  sfx_item_self:"",   // 나를 돕는 아이템 사용 (뽀용~)
+  sfx_item_attack:"", // 공격 아이템 사용 (지지직!)
+  sfx_gacha:"",       // 뽑기 (짤랑!)
+  sfx_attack_send:"", // 공격줄 발사 (휘융!)
+  sfx_hit:"",         // 공격을 받을 때 (경보음)
+  sfx_stage:"",       // 스테이지 클리어 (상승음)
+  sfx_win:"",         // 승리 팡파레
+  sfx_lose:"",        // 패배 (아쉬운 하강음)
+};
+let audioCtx=null, soundOn=store.get("soundOn",true);
+function AC(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){audioCtx=null;} }
+  if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume(); return audioCtx; }
+document.addEventListener("pointerdown",()=>AC(),{once:true}); // 모바일 오디오 잠금 해제
+function tone(f0,f1,dur,type,vol,delay){ const c=AC(); if(!c)return;
+  const t=c.currentTime+(delay||0), o=c.createOscillator(), g=c.createGain();
+  o.type=type||"sine"; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(Math.max(30,f1||f0),t+dur);
+  g.gain.setValueAtTime(vol||.25,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.02); }
+function noiseHit(dur,vol,delay){ const c=AC(); if(!c)return;
+  const t=c.currentTime+(delay||0), n=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=c.createBufferSource(); s.buffer=buf; const g=c.createGain(); g.gain.value=vol||.2;
+  s.connect(g); g.connect(c.destination); s.start(t); }
+const SYNTH={ /* 내장 합성 사운드 (귀엽고 짧게) */
+  sfx_lock(){ tone(220,140,.07,"triangle",.28); },
+  sfx_harddrop(){ tone(700,120,.12,"sawtooth",.14); noiseHit(.08,.22,.08); tone(150,90,.1,"triangle",.3,.08); },
+  sfx_rotate(){ tone(500,650,.04,"square",.07); },
+  sfx_line1(){ tone(880,880,.12,"sine",.25); },
+  sfx_line2(){ tone(784,784,.1,"sine",.24); tone(988,988,.12,"sine",.24,.09); },
+  sfx_line3(){ [659,830,988].forEach((f,i)=>tone(f,f,.11,"sine",.24,i*.08)); },
+  sfx_tetris(){ [523,659,784,1047].forEach((f,i)=>tone(f,f,.16,"triangle",.3,i*.09)); noiseHit(.25,.1,.36); },
+  sfx_item_self(){ tone(500,900,.15,"sine",.22); tone(900,1200,.12,"sine",.18,.12); },
+  sfx_item_attack(){ tone(300,90,.2,"sawtooth",.2); noiseHit(.1,.15,.05); },
+  sfx_gacha(){ tone(1200,1500,.06,"square",.15); tone(900,900,.08,"square",.15,.08); noiseHit(.06,.12,.14); },
+  sfx_attack_send(){ tone(400,900,.18,"sawtooth",.18); },
+  sfx_hit(){ tone(200,150,.12,"square",.22); tone(200,150,.12,"square",.22,.14); },
+  sfx_stage(){ [523,659,784,1047,1319].forEach((f,i)=>tone(f,f,.12,"sine",.22,i*.07)); },
+  sfx_win(){ [523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,f,.18,"triangle",.26,i*.11)); },
+  sfx_lose(){ [440,392,330,262].forEach((f,i)=>tone(f,f*.9,.22,"sine",.22,i*.16)); },
+};
+function playSfx(name){
+  if(!soundOn)return;
+  if(SOUND_FILES[name]){ try{ const a=new Audio(SOUND_FILES[name]); a.volume=.7; a.play().catch(()=>{});}catch(e){} return; }
+  if(SYNTH[name]) try{ SYNTH[name](); }catch(e){}
+}
+
+/* 배경 별 뿌리기 */
+(function(){const c=$("bgStars");for(let i=0;i<26;i++){const s=document.createElement("span");s.textContent=["✦","✧","⋆","·"][ri(0,3)];s.style.left=rand(0,100)+"%";s.style.top=rand(0,100)+"%";s.style.animationDelay=rand(0,3)+"s";c.appendChild(s);}})();
+
+/* ============================================================
+   1. 설정 (이름, 버튼 배치, DAS 등)
+   ============================================================ */
+const settings={
+  name: store.get("name", null),
+  oppPos: store.get("oppPos","right"),
+  das: store.get("das",170),                 // 좌우 꾹 누름 → 연속이동 시작 시간
+  layout: store.get("layout",null),          // {L:{x,y,size}, R:{x,y,size}} (비율 좌표)
+  lang: store.get("lang","ko"),              // ko / en / fr / zh
+  keymap: store.get("keymap",null),          // 키보드 매핑 (e.code 기준)
+  docks: store.get("docks",null),            // 갓차/보유아이템/공격 독 위치
+};
+if(!settings.name){ settings.name="Player-"+ri(1000,9999); store.set("name",settings.name); }
+/* 기본 키: 좌로돌리기=A, 우로돌리기=D, 즉시낙하=Space, 뽑기=Q, 아이템사용=E (설정에서 변경 가능) */
+const DEFAULT_KEYS={left:"ArrowLeft",right:"ArrowRight",down:"ArrowDown",up:"ArrowUp",rotL:"KeyA",rotR:"KeyD",hard:"Space",draw:"KeyQ",use:"KeyE",
+  quickL:"KeyZ",quickR:"KeyC",quickD:"KeyX"}; // ⚡ 퀵무브: Z=왼쪽 N칸, C=오른쪽 N칸, X=아래 N칸 (N·속도는 설정)
+settings.keymap={...DEFAULT_KEYS,...(settings.keymap||{})};
+settings.swipeSens = store.get("swipeSens", 28); // 터치 스와이프 민감도(px/1칸, 작을수록 민감)
+settings.quickCells = store.get("quickCells", 3); // ⚡ 퀵무브(Z/C/X) 한 번에 이동하는 칸 수
+settings.quickSpeed = store.get("quickSpeed", 30); // ⚡ 퀵무브 속도 (ms/1칸, 0=즉시)
+settings.gameStyle = store.get("gameStyle","tetris"); // 🧱 tetris(원본 유지) / 💥 buster(➕블럭+명칭 변경, 배포용)
+/* 🚀 출시 빌드 스위치: true = 매 실행(접속)마다 무조건 🍬슈가블럭스 모드로 시작.
+   상단 입력칸에 "TETRIS" 입력 → 그 세션 동안만 🧱TETRIS 모드로 전환·고정 (재실행 시 초기화).
+   상단 입력칸에 "zsdvvv" 입력 → 설정 메뉴 안에 🧩블럭 공방 활성화 (역시 세션 한정).
+   (개발 중 자유 토글로 돌리려면 false) */
+const RELEASE_BUILD = true;
+let tetrisUnlocked = false;   // ⚠️ 저장하지 않음: 세션(이번 실행) 한정!
+let editorUnlocked = false;   // 🧩 블럭 공방도 세션 한정 활성화
+if(RELEASE_BUILD) settings.gameStyle = "buster"; // 매 실행 초기 모드 = 슈가블럭스
+let stars = 0; // ⭐별은 게임마다 0에서 시작 (줄을 지운 수만큼 쌓이고, 게임이 끝나면 초기화)
+
+/* ============================================================
+   1-C. 플레이어 성장 데이터 (계속 하고 싶게 만드는 동기 시스템!)
+   · RP 랭크: 온라인 승리 +20 / 패배 -10 → 🥉브론즈 🥈실버(100) 🥇골드(250) 💎다이아(500)
+   · 연승 배지: 🔥3연승 ⚡5연승 👑10연승 (상대에게도 보임!)
+   · 배경 도감: 스테이지 클리어·온라인 승리로 배경 그림 영구 수집
+   · 일일 퀘스트: 매일 3개, 완료 시 +10 RP
+   · 상대전적: 만난 상대별 승패 기억
+   ============================================================ */
+let meta = store.get("meta", {rp:0, streak:0, best:0, rivals:{}, collected:[], quests:null});
+function saveMeta(){ store.set("meta",meta); }
+function tierOf(rp){ rp=rp||0;
+  return rp>=500?{i:"💎",n:T("tier4")}:rp>=250?{i:"🥇",n:T("tier3")}:rp>=100?{i:"🥈",n:T("tier2")}:{i:"🥉",n:T("tier1")}; }
+function streakBadge(s){ return s>=10?"👑":s>=5?"⚡":s>=3?"🔥":""; }
+/* 일일 퀘스트 */
+const QUEST_DEFS=[{k:"play",goal:3,icon:"🎮",name:"qPlay"},{k:"lines",goal:15,icon:"🧱",name:"qLines"},{k:"win",goal:1,icon:"🏆",name:"qWin"}];
+function todayKey(){ const d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function ensureQuests(){ if(!meta.quests||meta.quests.day!==todayKey()){
+  meta.quests={day:todayKey(),play:0,lines:0,win:0,claimed:[false,false,false]}; saveMeta(); } }
+function questProgress(key,n){
+  ensureQuests(); meta.quests[key]=(meta.quests[key]||0)+n;
+  QUEST_DEFS.forEach((q,i)=>{ if(!meta.quests.claimed[i] && meta.quests[q.k]>=q.goal){
+    meta.quests.claimed[i]=true; meta.rp+=10; toast(T("tQuestDone")); }});
+  saveMeta(); renderQuests(); refreshProfile();
+}
+function renderQuests(){
+  ensureQuests(); const box=$("questCard"); if(!box)return;
+  box.innerHTML=`<span style="font-size:11px;color:var(--ink-dim)">📜 ${T("questsT")}</span> `+
+    QUEST_DEFS.map((q,i)=>{ const v=Math.min(meta.quests[q.k]||0,q.goal), done=meta.quests.claimed[i];
+      return `<span class="ig-chip" title="${T(q.name)}" style="${done?'border-color:var(--candy-mint);color:var(--candy-mint)':''}">${q.icon} ${done?"✔":v+"/"+q.goal}</span>`; }).join("");
+}
+function refreshProfile(){
+  const t=tierOf(meta.rp), sb=streakBadge(meta.streak);
+  $("myNamePill").textContent=`👤 ${settings.name} · ${t.i}${meta.rp}${T("rpLabel")}${sb?" "+sb+meta.streak:""}`;
+}
+/* ============================================================
+   1-D. 🧩 블럭 공방 (슈가블럭스 전용 블럭 에디터)
+   · 칸 클릭: 있으면 삭제 / 없으면 추가
+   · 색상·등장 확률 변경, 새 블럭 추가·복제·삭제, 기본값 복원
+   · 💾 저장 & 적용 → localStorage 저장 → 재시작해도 그대로 반영
+   ============================================================ */
+let edSet=[], edSel=0; // 작업용 복사본 (5×5 셀)
+function edLoad(){ // 저장본(또는 기본값)을 5×5 편집 형식으로
+  const src=store.get("busterPieces", DEFAULT_BUSTER_SET);
+  edSet=src.map(p=>({key:p.key,color:p.color,w:p.w,
+    m:Array.from({length:5},(_,y)=>Array.from({length:5},(_,x)=>((p.m[y]&&p.m[y][x])?1:0)))}));
+  edSel=0;
+}
+function edNewKey(){ let i=1; while(edSet.some(p=>p.key==="C"+i))i++; return "C"+i; }
+function edPct(i){ const t=edSet.reduce((s,p)=>s+(+p.w||1),0); return (edSet[i].w/t*100).toFixed(1)+"%"; }
+function edDrawMini(cv,p){ const c=cv.getContext("2d"); c.clearRect(0,0,cv.width,cv.height);
+  const sq=normSquare(p.m); if(!sq)return; const s=Math.floor(34/sq.length);
+  const ox=(cv.width-sq.length*s)/2, oy=(cv.height-sq.length*s)/2;
+  sq.forEach((row,y)=>row.forEach((v,x)=>{ if(v)drawCell(c,ox+x*s,oy+y*s,s,p.color,false,false); }));
+}
+function edRenderChips(){
+  const box=$("beChips"); box.innerHTML="";
+  edSet.forEach((p,i)=>{
+    const ch=document.createElement("div"); ch.className="be-chip"+(i===edSel?" sel":"");
+    const cv=document.createElement("canvas"); cv.width=36; cv.height=36;
+    const lb=document.createElement("span"); lb.textContent=p.key;
+    ch.appendChild(cv); ch.appendChild(lb);
+    ch.addEventListener("click",()=>{ edSel=i; edRenderAll(); });
+    box.appendChild(ch); edDrawMini(cv,p);
+  });
+  const add=document.createElement("div"); add.className="be-chip newp"; add.textContent="＋";
+  add.title=T("beNew");
+  add.addEventListener("click",()=>{ // ➕ 새 블럭 추가
+    edSet.push({key:edNewKey(),color:"#ffd66b",w:10,
+      m:Array.from({length:5},()=>Array(5).fill(0))});
+    edSet[edSet.length-1].m[2][2]=1;
+    edSel=edSet.length-1; edRenderAll();
+  });
+  box.appendChild(add);
+}
+function edRenderGrid(){
+  const p=edSet[edSel], g=$("beGrid"); g.innerHTML="";
+  for(let y=0;y<5;y++)for(let x=0;x<5;x++){
+    const c=document.createElement("div"); c.className="be-cell"+(p.m[y][x]?" on":"");
+    if(p.m[y][x])c.style.background=p.color;
+    c.addEventListener("click",()=>{ p.m[y][x]=p.m[y][x]?0:1; edRenderAll(); }); // 클릭: 추가/삭제 토글
+    g.appendChild(c);
+  }
+  $("beColor").value=p.color; $("beWeight").value=p.w;
+  $("bePct").textContent=edPct(edSel);
+}
+function edRenderAll(){ edRenderChips(); edRenderGrid(); }
+$("blockEditBtn").addEventListener("click",()=>{ edLoad(); edRenderAll(); $("blockEditorOv").classList.add("on"); });
+$("beClose").addEventListener("click",()=>$("blockEditorOv").classList.remove("on"));
+$("beColor").addEventListener("input",e=>{ edSet[edSel].color=e.target.value; edRenderAll(); });
+$("beWeight").addEventListener("input",e=>{ edSet[edSel].w=+e.target.value; $("bePct").textContent=edPct(edSel); edRenderChips(); });
+$("beDup").addEventListener("click",()=>{ const p=edSet[edSel];
+  edSet.push({key:edNewKey(),color:p.color,w:p.w,m:p.m.map(r=>[...r])});
+  edSel=edSet.length-1; edRenderAll(); });
+$("beDel").addEventListener("click",()=>{ if(edSet.length<=1){ toast(T("beMin")); return; }
+  edSet.splice(edSel,1); edSel=Math.max(0,edSel-1); edRenderAll(); });
+$("beReset").addEventListener("click",()=>{ edSet=DEFAULT_BUSTER_SET.map(p=>({key:p.key,color:p.color,w:p.w,
+    m:Array.from({length:5},(_,y)=>Array.from({length:5},(_,x)=>((p.m[y]&&p.m[y][x])?1:0)))}));
+  edSel=0; edRenderAll(); toast(T("beResetQ")); });
+$("beSave").addEventListener("click",()=>{ // 💾 저장 & 적용
+  for(const p of edSet){ if(!normSquare(p.m)){ toast(T("beEmpty")); return; } }
+  const out=edSet.map(p=>({key:p.key,color:p.color,w:Math.max(1,+p.w||1),m:normSquare(p.m)}));
+  store.set("busterPieces",out);   // 영구 저장 → 재시작 시 자동 로드
+  applyBusterSet(out);             // 즉시 적용 (다음 블럭부터 새 세트)
+  toast(T("beSaved"),2200); playSfx("sfx_stage");
+  $("blockEditorOv").classList.remove("on");
+});
+
+/* 배경 도감 */
+function collectBg(id){ if(!meta.collected.includes(id)){ meta.collected.push(id); saveMeta();
+  toast(T("tCollected")+" ("+id+")"); } }
+function openCollection(){
+  const box=$("colGrid");
+  box.innerHTML=BACKGROUNDS.map(b=>{ const got=meta.collected.includes(b.id);
+    return `<div style="width:72px;height:120px;border-radius:10px;border:2px solid ${got?"var(--candy-yellow)":"var(--line)"};
+      background-image:url('${b.src.replace(/'/g,"%27")}');background-size:cover;background-position:center;position:relative;
+      ${got?"":"filter:grayscale(1) brightness(.4);"}display:flex;align-items:center;justify-content:center;font-size:22px;">
+      ${got?"":"🔒"}<span style="position:absolute;bottom:2px;font-size:9px;color:#fff;text-shadow:0 1px 2px #000">${b.id}</span></div>`; }).join("");
+  $("colCount").textContent=meta.collected.length+" / "+BACKGROUNDS.length;
+  $("collectionOv").classList.add("on");
+}
+
+/* ============================================================
+   1-B. 다국어 (한국어/영어/불어/중국어) - 새 문구는 여기에 한 줄만 추가!
+   ============================================================ */
+const I18N={
+ko:{beOpen:"열기",beUnlocked:"🧩 블럭 공방이 설정 메뉴에 활성화됐어요! (이번 실행 동안)",beBtn:"🧩 블럭 공방",beTitle:"블럭 공방 (슈가블럭스 전용)",beHint:"칸을 클릭해 모양을 만들고 저장하세요. 저장하면 다음 게임부터 바로 적용! (🧱히든 모드는 영향 없음)",beNew:"+ 새 블럭",beColor:"색상",beWeight:"등장 확률",beDup:"복제",beDel:"삭제",beReset:"기본값 복원",beSave:"💾 저장 & 적용",beSaved:"🧩 저장 완료! 다음 게임부터 새 블럭이 등장해요",beEmpty:"⚠️ 블럭 모양이 비어 있어요!",beMin:"⚠️ 블럭은 최소 1개 필요해요",beResetQ:"기본 9종으로 되돌렸어요 (저장을 눌러야 적용)",capsuleT:"미래 캡슐",unlockPh:"·····",tUnlocked:"🧱 클래식 모드 해금! 이제 전환할 수 있어요",styleTetris:"🧱 테트리스 모드",styleBuster:"🍬 슈가블럭스 모드",busterTitle:"슈가블럭스 Sugar Blocks",busterWord:"슈가블럭스",tQuad:"⭐ 쿼드 클리어!! ⭐",descBuster:" · 🍬 슈가블럭스: 12×22 오리지널 보드, ➕캔디 블럭과 ✨보너스 블럭 등장!",tier1:"브론즈",tier2:"실버",tier3:"골드",tier4:"다이아",collection:"배경 도감",questsT:"오늘의 퀘스트",qPlay:"게임 3판 하기",qLines:"줄 15개 지우기",qWin:"1승 하기",tQuestDone:"📜 퀘스트 완료! +10 RP",tCollected:"🖼 새 배경 수집!",board:"주간 랭킹",rival:"상대전적",lossUnit:"패",rpLabel:"RP",tRivalInfo:"⚔️ {o} 상대전적: {w}승 {l}패",lobby:"온라인 로비",serverAddr:"서버 주소",connect:"접속",connected:"✅ 접속됨! 방을 만들거나 입장하세요",connFail:"❌ 접속 실패. 서버 주소를 확인하세요",roomName:"방 이름",createRoom:"방 만들기",roomListT:"방 목록 (탭하여 입장)",refresh:"새로고침",noRooms:"열린 방이 없어요. 방을 만들어보세요!",waitingOpp:"상대를 기다리는 중... 🕐",oppLeftMsg:"상대가 나갔어요",tRematchWait:"상대의 재대결 수락을 기다리는 중...",winsUnit:"승",onlineTag:"🌐 온라인",descOnline:" · 🌐 온라인: 로비에서 방을 만들거나 입장! 승수가 방 목록에 표시돼요.",itemDetail:"📖 아이템 상세 설명",itemDetailTitle:"아이템 도감",close:"닫기",tLocked:"🔒 잠긴 칸이에요! (추후 업데이트·아이템 구매로 확장 예정)",item_blind_n:"깜깜이 모자",item_blind_d:"5초간 상대 화면의 블럭이 깜깜!",item_mirror_n:"청개구리 물약",item_mirror_d:"5초간 상대의 좌우가 반대로!",item_holes_n:"치즈 펀치",item_holes_d:"상대 블럭 모든 줄에 구멍 뽕뽕!",item_bomb_f:"펑! 💥",item_clear_f:"쓱싹~ ✨",item_shield_f:"든든해! 🛡️",item_slow_f:"느릿느릿~ 🐢",item_candy_f:"냠냠! 🍬+3⭐",item_attack_f:"슝—! 🌠",item_tornado_f:"휘리릭! 🌪️",item_zap_f:"찌릿찌릿! ⚡",item_fog_f:"뿌우연~ 🌫️",item_blind_f:"깜깜깜! 🙈",item_mirror_f:"왼쪽? 오른쪽? 🔀",item_holes_f:"뽕뽕뽕! 🧀",gDraw:"뽑기",gUse:"사용",kDraw:"뽑기 버튼",kUse:"아이템 사용 버튼",tNoItem:"보유 아이템이 없어요!",swipeLabel:"터치 스와이프 민감도(px)",swipeHint:"현재: {n}px (작을수록 민감) · 좌우 밀기=이동, 아래로 밀기=즉시낙하, 탭=회전",item_tornado_n:"회오리 사탕",item_tornado_d:"상대 바닥 3줄을 뒤죽박죽!",item_zap_n:"번개 젤리",item_zap_d:"8초간 상대 블럭 2.5배 가속!",item_fog_n:"솜구름 안개",item_fog_d:"6초간 상대의 판단력을 흐려요!",title:"별사탕 테트리스",tagline:"귀엽게 쌓고, 화려하게 터뜨리자!",mPlayers:"대전 방식",pSolo:"혼자하기",pMulti:"1 : 다수 (최대5)",mOpp:"상대",oCpu:"컴퓨터",oOnline:"온라인",oSoon:"🛠 준비 중",mMode:"게임 모드",mdClassic:"클래식",mdFight:"파이트",mdFightItem:"파이트+아이템",play:"게임 시작 ▶",settings:"설정",layoutBtn:"버튼 배치",
+descClassic:"🧱 정통 테트리스! 클리어 규칙: 줄 10개를 지우면 스테이지 클리어 → 속도가 빨라지고 뒷벽 그림이 바뀌어요. 줄을 지울 때마다 뒷벽 그림이 위에서부터 조금씩 공개!",descFight:"⚔️ 2줄 이상 지우면 그만큼 상대에게 은색 방해줄이 즉시 날아가요! (한 칸 구멍)",descFightItem:"💎 보석 블럭 줄을 지우면 캡슐이 공개! ⭐별을 모아 로또 추첨기를 돌리고, ⚔️버튼으로 모은 공격을 한 방에! (별은 게임마다 0부터)",
+soloNote:" (혼자하기에선 클래식만 가능 → 자동으로 1:1이 돼요)",multiNote:" · 다수전: 상대 공격력이 조정돼요.",
+score:"점수",lines:"줄",next:"다음",stage:"스테이지",stageRule:"클리어까지",gacha:"뽑기",ownedItems:"보유 아이템",attack:"공격",
+paused:"일시정지",resume:"계속하기",quit:"나가기",rematch:"재대결",leave:"나가기",gameover:"🌙 게임 오버",win:"🏆 승리!!",lose:"💫 패배...",winSub:"{o}의 화면이 가득 찼어요! (블럭이 꼭대기에 닿음)",loseSub:"내 화면이 가득 찼어요. 다음엔 이길 수 있어요!",soloSub:"점수 {s}점 · {l}줄 · 스테이지 {g}",
+myName:"내 이름",oppPos:"상대 화면 위치",posR:"우측 상단",posL:"좌측 상단",dasLabel:"좌우 꾹 누름 반응(ms)",dasHint:"현재: {n}ms (짧을수록 빨리 미끄러짐)",keySet:"키보드 키 변경 (버튼에 표시돼요)",pressKey:"키를 누르세요...",layoutEdit:"버튼 배치 편집",saveClose:"저장 & 닫기",dragHint:"드래그로 이동",editL:"왼쪽 크기",editR:"오른쪽 크기",reset:"초기화",done:"✔ 완료",editTitle:"🎛 버튼 배치 편집",
+gachaResult:"뽑기 결과!",grTake:"받기!",rar1:"일반",rar2:"레어",rar3:"초레어",
+kQuickL:"⚡퀵무브 ◀◀ (왼쪽 여러 칸)",kQuickR:"⚡퀵무브 ▶▶ (오른쪽 여러 칸)",kQuickD:"⚡퀵무브 ▼▼ (아래 여러 칸)",quickCellsLabel:"⚡ 퀵무브 이동 칸 수",quickCellsHint:"현재: {n}칸 (Z/C/X 한 번에 이동하는 칸 수)",quickSpeedLabel:"⚡ 퀵무브 속도(ms/칸)",quickSpeedHint:"현재: {n}ms/칸 (0=즉시, 작을수록 빠름)",kLeft:"왼쪽 이동",kRight:"오른쪽 이동",kDown:"한 칸 내리기 (누른 만큼 하강)",kUp:"회전(▲)",kRotL:"좌로 돌리기(↺)",kRotR:"우로 돌리기(↻)",kHard:"즉시 낙하(⤓)",
+tStageUp:"🚀 스테이지 {n} 클리어! 속도 UP! 새 그림 등장!",tNoStars:"⭐ 별이 부족해요! (필요: {n})",tBagFull:"🎒 가방이 가득! {i} 은 별 2개로 바꿨어요",tShield:"🛡 방패가 {n}줄 막았어요!",tAtkSent:"⚔️ {n}줄 공격!",tAtkIn:"⚠️ {o}의 {n}줄 공격이 온다!",tAtkStock:"⚔️ 2줄 이상 지워서 공격을 모아보세요!",tAtkFire:"⚔️ 모아둔 {n}줄 공격 발사!!",tGem:"💎 보석 줄 클리어! 캡슐이 공개됐어요!",tCapNow:"🔮 지금 구슬: {i} {n}",tLayout:"✔ 버튼 배치를 저장했어요!",tOnline:"🛠 온라인 대전은 다음 업데이트에서 열려요!",tCombo:"콤보!",tTetris:"⭐ 테트리스!! ⭐",tDouble:"더블! ✦",tTriple:"트리플!! ✦✦",
+me:"나",toMe:"나에게",toOpp:"{o}에게",selfUse:"{u} 사용",
+item_bomb_n:"캔디 폭탄",item_bomb_d:"내 바닥 2줄을 시원하게 삭제!",item_shield_n:"솜사탕 방패",item_shield_d:"상대 공격 2줄 방어!",item_slow_n:"거북이 시럽",item_slow_d:"10초간 블럭이 천천히!",item_attack_n:"유성우",item_attack_d:"상대에게 즉시 2줄 공격!",item_clear_n:"요술 빗자루",item_clear_d:"내 바닥 4줄 청소! 초레어!",item_candy_n:"별사탕 봉지",item_candy_d:"별 3개 획득! 냠냠!"},
+en:{beOpen:"Open",beUnlocked:"🧩 Block Workshop enabled in Settings! (this session)",beBtn:"🧩 Block Workshop",beTitle:"Block Workshop (Sugar Blocks only)",beHint:"Click cells to draw a shape, then save. Applies from the next game! (Hidden mode unaffected)",beNew:"+ New block",beColor:"Color",beWeight:"Spawn rate",beDup:"Duplicate",beDel:"Delete",beReset:"Restore defaults",beSave:"💾 Save & Apply",beSaved:"🧩 Saved! New blocks appear from the next game",beEmpty:"⚠️ The shape is empty!",beMin:"⚠️ At least 1 block is required",beResetQ:"Restored the default 9 (press Save to apply)",capsuleT:"Prediction Capsule",unlockPh:"·····",tUnlocked:"🧱 Classic mode unlocked! You can switch now",styleTetris:"🧱 Tetris Mode",styleBuster:"🍬 Sugar Blocks Mode",busterTitle:"Sugar Blocks",busterWord:"Sugar Blocks",tQuad:"⭐ QUAD CLEAR!! ⭐",descBuster:" · 🍬 Sugar Blocks: original 12×22 board with ➕candy & ✨bonus blocks!",tier1:"Bronze",tier2:"Silver",tier3:"Gold",tier4:"Diamond",collection:"BG Collection",questsT:"Daily Quests",qPlay:"Play 3 games",qLines:"Clear 15 lines",qWin:"Win 1 match",tQuestDone:"📜 Quest done! +10 RP",tCollected:"🖼 New background collected!",board:"Weekly Ranking",rival:"Head-to-head",lossUnit:"L",rpLabel:"RP",tRivalInfo:"⚔️ vs {o}: {w}W {l}L",lobby:"Online Lobby",serverAddr:"Server address",connect:"Connect",connected:"✅ Connected! Create or join a room",connFail:"❌ Connection failed. Check the address",roomName:"Room name",createRoom:"Create room",roomListT:"Rooms (tap to join)",refresh:"Refresh",noRooms:"No open rooms. Create one!",waitingOpp:"Waiting for an opponent... 🕐",oppLeftMsg:"Opponent left",tRematchWait:"Waiting for rematch accept...",winsUnit:"W",onlineTag:"🌐 Online",descOnline:" · 🌐 Online: create or join a room! Win counts show in the list.",itemDetail:"📖 Item details",itemDetailTitle:"Item Book",close:"Close",tLocked:"🔒 Locked slot! (expands via future update/purchase)",item_blind_n:"Blackout Hat",item_blind_d:"Rival's blocks invisible for 5s!",item_mirror_n:"Mirror Potion",item_mirror_d:"Rival's left/right flipped for 5s!",item_holes_n:"Cheese Punch",item_holes_d:"Punches a hole in every rival row!",item_bomb_f:"BOOM! 💥",item_clear_f:"Swish~ ✨",item_shield_f:"So safe! 🛡️",item_slow_f:"Sloooow~ 🐢",item_candy_f:"Yum! 🍬+3⭐",item_attack_f:"Whoosh! 🌠",item_tornado_f:"Whirl! 🌪️",item_zap_f:"Bzzzt! ⚡",item_fog_f:"So foggy~ 🌫️",item_blind_f:"Pitch black! 🙈",item_mirror_f:"Left? Right? 🔀",item_holes_f:"Holey moley! 🧀",gDraw:"Draw",gUse:"Use",kDraw:"Gacha draw",kUse:"Use item",tNoItem:"No items owned!",swipeLabel:"Touch swipe sensitivity (px)",swipeHint:"Now: {n}px (smaller = more sensitive) · swipe = move, swipe down = hard drop, tap = rotate",item_tornado_n:"Tornado Candy",item_tornado_d:"Scrambles rival's bottom 3 rows!",item_zap_n:"Zap Jelly",item_zap_d:"Rival blocks 2.5× faster for 8s!",item_fog_n:"Cloud Fog",item_fog_d:"Confuses your rival for 6s!",title:"Star Candy Tetris",tagline:"Stack it cute, pop it loud!",mPlayers:"Match type",pSolo:"Solo",pMulti:"1 : Many (max 5)",mOpp:"Opponent",oCpu:"Computer",oOnline:"Online",oSoon:"🛠 Coming soon",mMode:"Game mode",mdClassic:"Classic",mdFight:"Fight",mdFightItem:"Fight+Items",play:"START ▶",settings:"Settings",layoutBtn:"Button layout",
+descClassic:"🧱 Classic Tetris! Clear rule: erase 10 lines to clear a stage → speed rises and the back-wall picture changes. Every line reveals more of the picture from the top!",descFight:"⚔️ Clear 2+ lines and silver garbage rows fly to your rival instantly! (one hole)",descFightItem:"💎 Clear a gem line to peek the capsule! Collect ⭐stars, spin the lotto machine, and unleash stored attacks with ⚔️! (stars reset each game)",
+soloNote:" (Solo supports Classic only → switches to 1:1)",multiNote:" · Multi: rival damage is balanced.",
+score:"Score",lines:"Lines",next:"Next",stage:"Stage",stageRule:"to clear",gacha:"Gacha",ownedItems:"My items",attack:"Attack",
+paused:"Paused",resume:"Resume",quit:"Quit",rematch:"Rematch",leave:"Leave",gameover:"🌙 Game Over",win:"🏆 Victory!!",lose:"💫 Defeat...",winSub:"{o}'s board is full! (blocks reached the top)",loseSub:"My board filled up. Next time!",soloSub:"Score {s} · {l} lines · Stage {g}",
+myName:"My name",oppPos:"Rival screen side",posR:"Top right",posL:"Top left",dasLabel:"Hold-to-slide delay (ms)",dasHint:"Now: {n}ms (shorter = slides sooner)",keySet:"Change keyboard keys (shown on pads)",pressKey:"Press a key...",layoutEdit:"Edit button layout",saveClose:"Save & close",dragHint:"Drag to move",editL:"Left size",editR:"Right size",reset:"Reset",done:"✔ Done",editTitle:"🎛 Button layout",
+gachaResult:"Gacha result!",grTake:"Take it!",rar1:"Common",rar2:"Rare",rar3:"Super Rare",
+kQuickL:"⚡Quick move ◀◀",kQuickR:"⚡Quick move ▶▶",kQuickD:"⚡Quick drop ▼▼",quickCellsLabel:"⚡ Quick-move cells",quickCellsHint:"Now: {n} cells per press (Z/C/X)",quickSpeedLabel:"⚡ Quick-move speed (ms/cell)",quickSpeedHint:"Now: {n}ms/cell (0 = instant, smaller = faster)",kLeft:"Move left",kRight:"Move right",kDown:"Soft drop (1 cell/press)",kUp:"Rotate(▲)",kRotL:"Rotate left(↺)",kRotR:"Rotate right(↻)",kHard:"Hard drop(⤓)",
+tStageUp:"🚀 Stage {n} cleared! Speed UP! New picture!",tNoStars:"⭐ Not enough stars! (need {n})",tBagFull:"🎒 Bag full! {i} → 2 stars",tShield:"🛡 Shield blocked {n} rows!",tAtkSent:"⚔️ Sent {n} rows!",tAtkIn:"⚠️ {n} rows incoming from {o}!",tAtkStock:"⚔️ Clear 2+ lines to stock attacks!",tAtkFire:"⚔️ Fired {n} stored rows!!",tGem:"💎 Gem line! Capsule revealed!",tCapNow:"🔮 Current ball: {i} {n}",tLayout:"✔ Layout saved!",tOnline:"🛠 Online battles arrive in a future update!",tCombo:"COMBO!",tTetris:"⭐ TETRIS!! ⭐",tDouble:"DOUBLE! ✦",tTriple:"TRIPLE!! ✦✦",
+me:"Me",toMe:"to me",toOpp:"to {o}",selfUse:"{u} used",
+item_bomb_n:"Candy Bomb",item_bomb_d:"Deletes my bottom 2 rows!",item_shield_n:"Cotton Shield",item_shield_d:"Blocks 2 attack rows!",item_slow_n:"Turtle Syrup",item_slow_d:"Slow blocks for 10s!",item_attack_n:"Meteor Shower",item_attack_d:"Instantly sends 2 rows!",item_clear_n:"Magic Broom",item_clear_d:"Sweeps my bottom 4 rows!",item_candy_n:"Star Candy Bag",item_candy_d:"Get 3 stars! Yum!"},
+fr:{beOpen:"Ouvrir",beUnlocked:"🧩 Atelier de Blocs activé dans Réglages ! (cette session)",beBtn:"🧩 Atelier de Blocs",beTitle:"Atelier de Blocs (Sugar Blocks)",beHint:"Cliquez les cases pour dessiner, puis sauvez. Appliqué dès la prochaine partie ! (mode caché intact)",beNew:"+ Nouveau bloc",beColor:"Couleur",beWeight:"Fréquence",beDup:"Dupliquer",beDel:"Supprimer",beReset:"Valeurs par défaut",beSave:"💾 Sauver & Appliquer",beSaved:"🧩 Sauvé ! Nouveaux blocs dès la prochaine partie",beEmpty:"⚠️ La forme est vide !",beMin:"⚠️ Au moins 1 bloc requis",beResetQ:"9 blocs par défaut restaurés (Sauver pour appliquer)",capsuleT:"Capsule de Prévision",unlockPh:"·····",tUnlocked:"🧱 Mode classique débloqué !",styleTetris:"🧱 Mode Tetris",styleBuster:"🍬 Mode Sugar Blocks",busterTitle:"Sugar Blocks",busterWord:"Sugar Blocks",tQuad:"⭐ QUAD !! ⭐",descBuster:" · 🍬 Sugar Blocks : plateau 12×22 original, blocs ➕ et ✨bonus !",tier1:"Bronze",tier2:"Argent",tier3:"Or",tier4:"Diamant",collection:"Collection de fonds",questsT:"Quêtes du jour",qPlay:"Jouer 3 parties",qLines:"Effacer 15 lignes",qWin:"Gagner 1 match",tQuestDone:"📜 Quête finie ! +10 RP",tCollected:"🖼 Nouveau fond collecté !",board:"Classement hebdo",rival:"Face-à-face",lossUnit:"D",rpLabel:"RP",tRivalInfo:"⚔️ vs {o} : {w}V {l}D",lobby:"Salon en ligne",serverAddr:"Adresse du serveur",connect:"Connecter",connected:"✅ Connecté ! Créez ou rejoignez une salle",connFail:"❌ Échec. Vérifiez l'adresse",roomName:"Nom de salle",createRoom:"Créer une salle",roomListT:"Salles (taper pour entrer)",refresh:"Actualiser",noRooms:"Aucune salle. Créez-en une !",waitingOpp:"En attente d'un adversaire... 🕐",oppLeftMsg:"L'adversaire est parti",tRematchWait:"En attente de la revanche...",winsUnit:"V",onlineTag:"🌐 En ligne",descOnline:" · 🌐 En ligne : créez ou rejoignez ! Les victoires s'affichent.",itemDetail:"📖 Détails des objets",itemDetailTitle:"Catalogue d'objets",close:"Fermer",tLocked:"🔒 Case verrouillée ! (bientôt via mise à jour/achat)",item_blind_n:"Chapeau Noir",item_blind_d:"Blocs adverses invisibles 5s !",item_mirror_n:"Potion Miroir",item_mirror_d:"Gauche/droite adverses inversées 5s !",item_holes_n:"Coup de Fromage",item_holes_d:"Un trou dans chaque ligne adverse !",item_bomb_f:"BOUM ! 💥",item_clear_f:"Zou~ ✨",item_shield_f:"Bien à l'abri ! 🛡️",item_slow_f:"Touuut doux~ 🐢",item_candy_f:"Miam ! 🍬+3⭐",item_attack_f:"Vzoum ! 🌠",item_tornado_f:"Tourbillon ! 🌪️",item_zap_f:"Bzzt ! ⚡",item_fog_f:"Quelle brume~ 🌫️",item_blind_f:"Tout noir ! 🙈",item_mirror_f:"Gauche ? Droite ? 🔀",item_holes_f:"Plein de trous ! 🧀",gDraw:"Tirer",gUse:"Utiliser",kDraw:"Tirage gacha",kUse:"Utiliser objet",tNoItem:"Aucun objet !",swipeLabel:"Sensibilité tactile (px)",swipeHint:"Actuel : {n}px (plus petit = plus sensible) · glisser = bouger, glisser bas = chute, taper = tourner",item_tornado_n:"Bonbon Tornade",item_tornado_d:"Mélange 3 lignes du bas adverses !",item_zap_n:"Gelée Éclair",item_zap_d:"Blocs adverses 2,5× plus vite 8s !",item_fog_n:"Brume Nuageuse",item_fog_d:"Embrouille l'adversaire 6s !",title:"Tétris Bonbon Étoilé",tagline:"Empile mignon, explose brillant !",mPlayers:"Type de match",pSolo:"Solo",pMulti:"1 : Plusieurs (max 5)",mOpp:"Adversaire",oCpu:"Ordinateur",oOnline:"En ligne",oSoon:"🛠 Bientôt",mMode:"Mode de jeu",mdClassic:"Classique",mdFight:"Combat",mdFightItem:"Combat+Objets",play:"JOUER ▶",settings:"Réglages",layoutBtn:"Boutons",
+descClassic:"🧱 Tétris classique ! Règle : effacez 10 lignes pour finir un niveau → la vitesse monte et l'image du fond change. Chaque ligne révèle l'image depuis le haut !",descFight:"⚔️ Effacez 2+ lignes et des rangées argentées volent vers l'adversaire ! (un trou)",descFightItem:"💎 Effacez une ligne à gemme pour voir la capsule ! Collectez des ⭐, tournez la machine loto, et lâchez vos attaques avec ⚔️ ! (étoiles remises à zéro)",
+soloNote:" (Solo = Classique seulement → passe en 1:1)",multiNote:" · Multi : dégâts équilibrés.",
+score:"Score",lines:"Lignes",next:"Suivant",stage:"Niveau",stageRule:"pour finir",gacha:"Gacha",ownedItems:"Mes objets",attack:"Attaque",
+paused:"Pause",resume:"Continuer",quit:"Quitter",rematch:"Revanche",leave:"Sortir",gameover:"🌙 Partie finie",win:"🏆 Victoire !!",lose:"💫 Défaite...",winSub:"Le plateau de {o} est plein ! (blocs au sommet)",loseSub:"Mon plateau est plein. La prochaine fois !",soloSub:"Score {s} · {l} lignes · Niveau {g}",
+myName:"Mon nom",oppPos:"Écran adverse",posR:"En haut à droite",posL:"En haut à gauche",dasLabel:"Délai de glisse (ms)",dasHint:"Actuel : {n}ms (plus court = glisse plus vite)",keySet:"Changer les touches (affichées sur les pads)",pressKey:"Appuyez une touche...",layoutEdit:"Éditer les boutons",saveClose:"Sauver & fermer",dragHint:"Glisser pour déplacer",editL:"Taille gauche",editR:"Taille droite",reset:"Réinitialiser",done:"✔ Fini",editTitle:"🎛 Disposition",
+gachaResult:"Résultat gacha !",grTake:"Prendre !",rar1:"Commun",rar2:"Rare",rar3:"Super Rare",
+kQuickL:"⚡Déplacement rapide ◀◀",kQuickR:"⚡Déplacement rapide ▶▶",kQuickD:"⚡Descente rapide ▼▼",quickCellsLabel:"⚡ Cases du déplacement rapide",quickCellsHint:"Actuel : {n} cases par appui (Z/C/X)",quickSpeedLabel:"⚡ Vitesse rapide (ms/case)",quickSpeedHint:"Actuel : {n}ms/case (0 = instantané)",kLeft:"Aller à gauche",kRight:"Aller à droite",kDown:"Descendre (1 case/appui)",kUp:"Tourner(▲)",kRotL:"Tourner à gauche(↺)",kRotR:"Tourner à droite(↻)",kHard:"Chute directe(⤓)",
+tStageUp:"🚀 Niveau {n} fini ! Vitesse UP ! Nouvelle image !",tNoStars:"⭐ Pas assez d'étoiles ! (il faut {n})",tBagFull:"🎒 Sac plein ! {i} → 2 étoiles",tShield:"🛡 Bouclier a bloqué {n} lignes !",tAtkSent:"⚔️ {n} lignes envoyées !",tAtkIn:"⚠️ {n} lignes arrivent de {o} !",tAtkStock:"⚔️ Effacez 2+ lignes pour stocker !",tAtkFire:"⚔️ {n} lignes lâchées !!",tGem:"💎 Ligne à gemme ! Capsule révélée !",tCapNow:"🔮 Boule actuelle : {i} {n}",tLayout:"✔ Disposition sauvée !",tOnline:"🛠 Le mode en ligne arrive bientôt !",tCombo:"COMBO !",tTetris:"⭐ TÉTRIS !! ⭐",tDouble:"DOUBLE ! ✦",tTriple:"TRIPLE !! ✦✦",
+me:"Moi",toMe:"à moi",toOpp:"à {o}",selfUse:"{u} a utilisé",
+item_bomb_n:"Bombe Bonbon",item_bomb_d:"Efface mes 2 lignes du bas !",item_shield_n:"Bouclier Guimauve",item_shield_d:"Bloque 2 lignes d'attaque !",item_slow_n:"Sirop Tortue",item_slow_d:"Blocs lents 10s !",item_attack_n:"Pluie d'Étoiles",item_attack_d:"Envoie 2 lignes direct !",item_clear_n:"Balai Magique",item_clear_d:"Balaie mes 4 lignes du bas !",item_candy_n:"Sachet d'Étoiles",item_candy_d:"3 étoiles ! Miam !"},
+zh:{beOpen:"打开",beUnlocked:"🧩 方块工坊已在设置中启用！(本次运行)",beBtn:"🧩 方块工坊",beTitle:"方块工坊 (仅糖糖方块)",beHint:"点击格子绘制形状后保存。下一局立即生效！(隐藏模式不受影响)",beNew:"+ 新方块",beColor:"颜色",beWeight:"出现概率",beDup:"复制",beDel:"删除",beReset:"恢复默认",beSave:"💾 保存并应用",beSaved:"🧩 已保存！下一局出现新方块",beEmpty:"⚠️ 形状是空的！",beMin:"⚠️ 至少需要1个方块",beResetQ:"已恢复默认9种 (按保存生效)",capsuleT:"预测胶囊",unlockPh:"·····",tUnlocked:"🧱 经典模式已解锁！现在可以切换",styleTetris:"🧱 俄罗斯方块模式",styleBuster:"🍬 糖糖方块模式",busterTitle:"糖糖方块 Sugar Blocks",busterWord:"糖糖方块",tQuad:"⭐ 四连爆!! ⭐",descBuster:" · 🍬 糖糖方块：12×22原创棋盘，含➕糖果与✨奖励方块！",tier1:"青铜",tier2:"白银",tier3:"黄金",tier4:"钻石",collection:"背景图鉴",questsT:"每日任务",qPlay:"玩3局游戏",qLines:"消除15行",qWin:"赢1局",tQuestDone:"📜 任务完成！+10 RP",tCollected:"🖼 收集到新背景！",board:"每周排行",rival:"交手记录",lossUnit:"负",rpLabel:"RP",tRivalInfo:"⚔️ 对 {o}：{w}胜 {l}负",lobby:"在线大厅",serverAddr:"服务器地址",connect:"连接",connected:"✅ 已连接！创建或加入房间",connFail:"❌ 连接失败，请检查地址",roomName:"房间名",createRoom:"创建房间",roomListT:"房间列表 (点击加入)",refresh:"刷新",noRooms:"暂无房间，创建一个吧！",waitingOpp:"等待对手中... 🕐",oppLeftMsg:"对手已离开",tRematchWait:"等待对方接受再战...",winsUnit:"胜",onlineTag:"🌐 在线",descOnline:" · 🌐 在线：创建或加入房间！胜场会显示在列表中。",itemDetail:"📖 道具详情",itemDetailTitle:"道具图鉴",close:"关闭",tLocked:"🔒 锁定栏位！(未来更新/购买道具可解锁)",item_blind_n:"遮眼帽",item_blind_d:"对手方块隐形5秒！",item_mirror_n:"反向药水",item_mirror_d:"对手左右颠倒5秒！",item_holes_n:"奶酪拳",item_holes_d:"对手每行打一个洞！",item_bomb_f:"砰！💥",item_clear_f:"唰唰~ ✨",item_shield_f:"安心啦！🛡️",item_slow_f:"慢吞吞~ 🐢",item_candy_f:"好吃！🍬+3⭐",item_attack_f:"咻——！🌠",item_tornado_f:"呼噜噜！🌪️",item_zap_f:"滋滋！⚡",item_fog_f:"雾蒙蒙~ 🌫️",item_blind_f:"黑漆漆！🙈",item_mirror_f:"左？右？🔀",item_holes_f:"洞洞洞！🧀",gDraw:"抽取",gUse:"使用",kDraw:"扭蛋抽取键",kUse:"使用道具键",tNoItem:"没有道具！",swipeLabel:"触摸滑动灵敏度(px)",swipeHint:"当前: {n}px (越小越灵敏) · 左右滑=移动, 下滑=瞬落, 点击=旋转",item_tornado_n:"龙卷糖",item_tornado_d:"打乱对手底部3行！",item_zap_n:"闪电软糖",item_zap_d:"对手方块加速2.5倍持续8秒！",item_fog_n:"棉云迷雾",item_fog_d:"迷惑对手6秒！",title:"星星糖俄罗斯方块",tagline:"可爱地堆，华丽地消！",mPlayers:"对战方式",pSolo:"单人",pMulti:"1 : 多人 (最多5)",mOpp:"对手",oCpu:"电脑",oOnline:"在线",oSoon:"🛠 即将推出",mMode:"游戏模式",mdClassic:"经典",mdFight:"对战",mdFightItem:"对战+道具",play:"开始游戏 ▶",settings:"设置",layoutBtn:"按钮布局",
+descClassic:"🧱 经典玩法！通关规则：消除10行即通过关卡 → 速度加快，背景图片更换。每消一行，图片就从上方多显示一点！",descFight:"⚔️ 消除2行以上，银色干扰行立刻飞向对手！(留一个洞)",descFightItem:"💎 消除宝石行可以偷看胶囊！收集⭐星星转动彩票机，用⚔️一次性释放攒下的攻击！(星星每局清零)",
+soloNote:"（单人只支持经典 → 自动改为1:1）",multiNote:" · 多人战：对手伤害经过平衡。",
+score:"分数",lines:"行数",next:"下一个",stage:"关卡",stageRule:"通关还需",gacha:"扭蛋",ownedItems:"我的道具",attack:"攻击",
+paused:"暂停",resume:"继续",quit:"退出",rematch:"再来一局",leave:"离开",gameover:"🌙 游戏结束",win:"🏆 胜利!!",lose:"💫 失败...",winSub:"{o}的棋盘满了！(方块到顶)",loseSub:"我的棋盘满了，下次一定赢！",soloSub:"分数 {s} · {l}行 · 关卡 {g}",
+myName:"我的名字",oppPos:"对手画面位置",posR:"右上",posL:"左上",dasLabel:"长按滑动延迟(ms)",dasHint:"当前: {n}ms (越短滑得越快)",keySet:"更改键盘按键 (会显示在按钮上)",pressKey:"请按一个键...",layoutEdit:"编辑按钮布局",saveClose:"保存并关闭",dragHint:"拖动移动",editL:"左侧大小",editR:"右侧大小",reset:"重置",done:"✔ 完成",editTitle:"🎛 按钮布局",
+gachaResult:"扭蛋结果！",grTake:"收下!",rar1:"普通",rar2:"稀有",rar3:"超稀有",
+kQuickL:"⚡快速移动 ◀◀",kQuickR:"⚡快速移动 ▶▶",kQuickD:"⚡快速下落 ▼▼",quickCellsLabel:"⚡ 快速移动格数",quickCellsHint:"当前: {n}格 (Z/C/X 每按一次)",quickSpeedLabel:"⚡ 快速移动速度(ms/格)",quickSpeedHint:"当前: {n}ms/格 (0=瞬间, 越小越快)",kLeft:"左移",kRight:"右移",kDown:"下移一格 (按一次一格)",kUp:"旋转(▲)",kRotL:"左旋(↺)",kRotR:"右旋(↻)",kHard:"瞬间落下(⤓)",
+tStageUp:"🚀 关卡{n}通过！速度UP！新图片登场！",tNoStars:"⭐ 星星不够！(需要{n})",tBagFull:"🎒 背包满了！{i} 换成2颗星",tShield:"🛡 护盾挡住了{n}行！",tAtkSent:"⚔️ 发送{n}行攻击！",tAtkIn:"⚠️ {o}的{n}行攻击来了！",tAtkStock:"⚔️ 消2行以上来积攒攻击！",tAtkFire:"⚔️ 释放攒下的{n}行攻击!!",tGem:"💎 宝石行消除！胶囊公开！",tCapNow:"🔮 当前球: {i} {n}",tLayout:"✔ 布局已保存！",tOnline:"🛠 在线对战将在下次更新开放！",tCombo:"连击!",tTetris:"⭐ 四连消!! ⭐",tDouble:"双消! ✦",tTriple:"三消!! ✦✦",
+me:"我",toMe:"对我",toOpp:"对{o}",selfUse:"{u} 使用了",
+item_bomb_n:"糖果炸弹",item_bomb_d:"清除我底部2行！",item_shield_n:"棉花糖护盾",item_shield_d:"抵挡2行攻击！",item_slow_n:"乌龟糖浆",item_slow_d:"方块减速10秒！",item_attack_n:"流星雨",item_attack_d:"立刻攻击对手2行！",item_clear_n:"魔法扫帚",item_clear_d:"清扫我底部4行！",item_candy_n:"星星糖袋",item_candy_d:"获得3颗星！好吃！"},
+};
+function T(key,vars){ let s=(I18N[settings.lang]&&I18N[settings.lang][key])||I18N.ko[key]||key;
+  if(vars)for(const k in vars)s=s.split("{"+k+"}").join(vars[k]); return s; }
+function brandTitle(){ return T(settings.gameStyle==="buster"?"busterTitle":"title"); }
+function applyLang(){
+  document.body.dataset.lang=settings.lang;
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent=T(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n="title"]').forEach(el=>el.textContent=brandTitle()); // 스타일별 브랜드
+  document.querySelectorAll(".ctl-cluster").forEach(el=>el.dataset.hint=T("dragHint"));
+  document.title=brandTitle()+" ⭐";
+}
+
+/* ============================================================
+   2. 블럭(테트로미노) 정의 - 캔디 색상
+   ============================================================ */
+/* 🧱 히든(TETRIS) 모드 팔레트: 원본 그대로 유지 */
+const COLORS=["","#7fc4ff","#ffd66b","#c39bff","#6fe8cf","#ff8fb1","#ffb36b","#9ef07f","#cfd6e6","#ff9de2","#7ff0e8"];
+/* 🍬 슈가블럭스 전용 '별사탕 캔디' 팔레트: 원작 블록-색 조합을 전면 파괴한 독자 배색
+   I=달콤한 핑크, O=애플 민트, T=체리 퍼플, S=레몬 크림, Z=소다 블루, L=라벤더, J=피치,
+   8=은색(공격줄), 9=➕캔디, 10=✨보너스 블럭 */
+const COLORS_B=["","#ff9ec6","#8df0c8","#d88bff","#ffe08a","#86c8ff","#b3a6ff","#ffb08a","#cfd6e6","#ff9de2","#7ff0e8"];
+function COL(i){ return (styleNow()==="buster"?COLORS_B:COLORS)[i] || "#ff9ec6"; }
+const GEM_COLOR="#fff3a8";
+const SHAPES={
+  I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  O:[[2,2],[2,2]],
+  T:[[0,3,0],[3,3,3],[0,0,0]],
+  S:[[0,4,4],[4,4,0],[0,0,0]],
+  Z:[[5,5,0],[0,5,5],[0,0,0]],
+  L:[[0,0,6],[6,6,6],[0,0,0]],
+  J:[[7,0,0],[7,7,7],[0,0,0]],
+  P:[[0,9,0],[9,9,9],[0,9,0]], /* ➕ 캔디 블럭 (🍬슈가블럭스 전용) */
+  B:[[0,10,0],[10,10,10],[10,0,0]], /* ✨ 보너스 블럭: T형에서 1칸 늘어난 5칸 독자 조각 (🍬전용, 확률 등장) */
+};
+const KEYS=["I","O","T","S","Z","L","J"];              // 🧱 히든 모드: 원본 7종 그대로 (편집 불가!)
+function styleNow(){ return (match&&match.style)||settings.gameStyle; }
+
+/* ═══ 🧩 슈가블럭스 커스텀 블럭 세트 ═══
+   블럭 공방(에디터)에서 모양/색/확률을 바꾸고 저장하면 localStorage에 보관되어
+   게임을 재시작해도 그대로 반영됩니다. 🧱히든 모드에는 절대 영향 없음. */
+const DEFAULT_BUSTER_SET=[ // {key, m:모양(1=칸), color, w:등장 가중치}
+  {key:"I",m:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],color:"#ff9ec6",w:10},
+  {key:"O",m:[[1,1],[1,1]],color:"#8df0c8",w:10},
+  {key:"T",m:[[0,1,0],[1,1,1],[0,0,0]],color:"#d88bff",w:10},
+  {key:"S",m:[[0,1,1],[1,1,0],[0,0,0]],color:"#ffe08a",w:10},
+  {key:"Z",m:[[1,1,0],[0,1,1],[0,0,0]],color:"#86c8ff",w:10},
+  {key:"L",m:[[0,0,1],[1,1,1],[0,0,0]],color:"#b3a6ff",w:10},
+  {key:"J",m:[[1,0,0],[1,1,1],[0,0,0]],color:"#ffb08a",w:10},
+  {key:"P",m:[[0,1,0],[1,1,1],[0,1,0]],color:"#ff9de2",w:10},
+  {key:"B",m:[[0,1,0],[1,1,1],[1,0,0]],color:"#7ff0e8",w:9},
+];
+let BUSTER_SHAPES={}, BUSTER_LIST=[]; // 실행용 (applyBusterSet이 채움)
+function normSquare(m){ // 모양을 정사각 행렬로 정리 (회전 계산용)
+  let minX=99,minY=99,maxX=-1,maxY=-1;
+  m.forEach((r,y)=>r.forEach((v,x)=>{if(v){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}}));
+  if(maxX<0)return null;
+  const n=Math.max(maxX-minX+1,maxY-minY+1);
+  return Array.from({length:n},(_,y)=>Array.from({length:n},(_,x)=>{
+    const sy=minY+y,sx=minX+x; return (m[sy]&&m[sy][sx])?1:0; }));
+}
+function applyBusterSet(list){ // 저장된 세트를 게임에 적용 (팔레트/모양/확률 재구성)
+  BUSTER_SHAPES={}; BUSTER_LIST=[];
+  COLORS_B.length=0; COLORS_B.push(""); let idx=1;
+  list.forEach(p=>{
+    const sq=normSquare(p.m); if(!sq)return;
+    if(idx===8){COLORS_B[8]="#cfd6e6"; idx=9;} // 8번은 은색(공격줄) 고정
+    COLORS_B[idx]=p.color;
+    BUSTER_SHAPES[p.key]=sq.map(r=>r.map(v=>v?idx:0));
+    BUSTER_LIST.push({key:p.key,w:Math.max(1,+p.w||1),color:p.color});
+    idx++;
+  });
+  if(COLORS_B.length<9)COLORS_B[8]="#cfd6e6";
+}
+function pullBusterKey(){ // 확률(가중치) 기반 뽑기
+  const total=BUSTER_LIST.reduce((s,p)=>s+p.w,0); let r=Math.random()*total;
+  for(const p of BUSTER_LIST){ if((r-=p.w)<0)return p.key; }
+  return BUSTER_LIST[0].key;
+}
+function busterShapeOf(k){ return BUSTER_SHAPES[k] || SHAPES[k] || BUSTER_SHAPES[BUSTER_LIST[0]&&BUSTER_LIST[0].key]; }
+function rotateM(m,dir){ // dir 1=시계, -1=반시계
+  const n=m.length, r=Array.from({length:n},()=>Array(n).fill(0));
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){ if(dir===1)r[x][n-1-y]=m[y][x]; else r[n-1-x][y]=m[y][x]; }
+  return r;
+}
+
+/* ============================================================
+   3. 테트리스 엔진 (플레이어/AI 공용)
+   ============================================================ */
+/* 보드 크기: 🍬슈가블럭스 = 12×22 (독자 규격) / 🧱히든 모드 = 10×20 (원본 그대로)
+   newMatch 에서 스타일에 따라 자동 설정되며 모든 계산이 이 변수에 연동됨 */
+let CW=12, CH=22;
+function setBoardDims(style){ if(style==="buster"){CW=12;CH=22;} else {CW=10;CH=20;} }
+class Tetris{
+  constructor(opts){
+    this.opts=opts;                 // {isPlayer, mode, onLines, onOver, onStage, fx}
+    this.LINES_PER_STAGE=10;        // ★ 스테이지 클리어 규칙: 10줄
+    this.reset();
+  }
+  reset(){
+    this.grid=Array.from({length:CH},()=>Array(CW).fill(null)); // null 또는 {c:색번호, gem:bool}
+    this.bag=[]; this.score=0; this.lines=0; this.stage=1;
+    this.over=false; this.combo=0; this.shield=0; this.slowUntil=0; this.fastUntil=0;
+    this.mirrorUntil=0; this.blindUntil=0; this.fogUntil=0; // 🔀 좌우반전 / 🙈 블라인드 / 🌫 안개 (아이템 디버프)
+    this.pendingGarbage=0; this.dropAcc=0; this.softBurst=0; this.qMove=null;
+    this.spawn(); this.next=this.pull();
+  }
+  pull(){
+    if(this.opts.style==="buster") return pullBusterKey(); // 🧩 커스텀 세트 확률 뽑기
+    if(!this.bag.length){ this.bag=[...KEYS].sort(()=>Math.random()-.5); } return this.bag.pop(); }
+  baseSpeed(){ // 스테이지에 따라 점점 빨라짐 (ms/1칸)
+    const s = this.stage;
+    let ms = Math.max(90, 800 - (s-1)*60);
+    if(performance.now()<this.slowUntil) ms*=2;   // 🐢 슬로우 아이템
+    if(performance.now()<this.fastUntil) ms/=2.5; // ⚡ 번개 젤리 (상대가 걸어옴)
+    return ms;
+  }
+  spawn(){
+    const key=this.next||this.pull();
+    this.next=this.pull();
+    const SH = this.opts.style==="buster" ? busterShapeOf(key) : SHAPES[key];
+    this.cur={key, m:SH.map(r=>[...r]), x:Math.floor((CW-SH.length)/2), y:-1, gemCell:null};
+    // 아이템 모드: 12% 확률로 보석 박힌 블럭
+    if(this.opts.mode==="fightItem" && Math.random()<0.12){
+      const cells=[];
+      this.cur.m.forEach((row,y)=>row.forEach((v,x)=>{if(v)cells.push([x,y]);}));
+      this.cur.gemCell=cells[ri(0,cells.length-1)];
+    }
+    /* ★ 표준 테트리스: 등장 자리가 좁으면 천장 위에서 시작할 뿐, 등장만으로 게임이 끝나지 않음.
+       패배는 오직 블럭이 천장에 '닿아 고정'될 때만 (lock에서 판정) */
+    let tries=0;
+    while(this.collide(this.cur.m,this.cur.x,this.cur.y) && tries++<4) this.cur.y--;
+  }
+  collide(m,px,py){
+    for(let y=0;y<m.length;y++)for(let x=0;x<m.length;x++){
+      if(!m[y] || !m[y][x])continue;
+      const gx=px+x, gy=py+y;
+      if(gx<0||gx>=CW||gy>=CH)return true;
+      if(gy>=0 && this.grid[gy][gx])return true;
+    }
+    return false;
+  }
+  move(dx){ if(this.over)return false;
+    if(performance.now()<this.mirrorUntil) dx=-dx; // 🔀 청개구리 물약: 좌우 반전!
+    if(!this.collide(this.cur.m,this.cur.x+dx,this.cur.y)){this.cur.x+=dx;return true;} return false; }
+  rotate(dir){
+    if(this.over)return;
+    const r=rotateM(this.cur.m,dir);
+    for(const k of [0,-1,1,-2,2]){ // 벽차기
+      if(!this.collide(r,this.cur.x+k,this.cur.y)){ this.cur.m=r; this.cur.x+=k; this._rotGemFix(dir); if(this.opts.isPlayer)playSfx("sfx_rotate"); return true; }
+      if(!this.collide(r,this.cur.x+k,this.cur.y-1)){ this.cur.m=r; this.cur.x+=k; this.cur.y-=1; this._rotGemFix(dir); if(this.opts.isPlayer)playSfx("sfx_rotate"); return true; }
+    }
+    return false;
+  }
+  _rotGemFix(dir){ if(!this.cur.gemCell)return; const n=this.cur.m.length,[x,y]=this.cur.gemCell;
+    this.cur.gemCell = dir===1 ? [n-1-y,x] : [y,n-1-x]; }
+  step(){ // 한 칸 하강. 바닥이면 고정
+    if(this.over)return;
+    if(!this.collide(this.cur.m,this.cur.x,this.cur.y+1)){ this.cur.y++; return true; }
+    this.lock(); return false;
+  }
+  hardDrop(){
+    if(this.over)return 0;
+    let d=0; const fromY=this.cur.y;
+    while(!this.collide(this.cur.m,this.cur.x,this.cur.y+1)){this.cur.y++;d++;}
+    this.score+=d*2;
+    this.opts.fx && this.opts.fx.blaster(this.cur, fromY); // 블라스터 이펙트
+    this.lock(true);
+    return d;
+  }
+  lock(hard){
+    if(this.opts.isPlayer) playSfx(hard?"sfx_harddrop":"sfx_lock"); // 🔊 블록 놓기/꽂기
+    const c=this.cur; let aboveCeiling=false; const placed=[];
+    c.m.forEach((row,y)=>row.forEach((v,x)=>{
+      if(!v)return; const gy=c.y+y,gx=c.x+x;
+      if(gy<0){ aboveCeiling=true; return; } // 천장 위에 고정됨
+      this.grid[gy][gx]={c:v, gem: !!(c.gemCell&&c.gemCell[0]===x&&c.gemCell[1]===y)};
+      placed.push([gx,gy]);
+    }));
+    if(this.opts.style==="buster" && this.opts.isPlayer && this.opts.fx) this.opts.fx.gemLock(placed); // 🍬 유리보석 반짝
+    if(hard && this.opts.fx) this.opts.fx.impact(c);   // 내려꽂힘 이펙트
+    this.clearLines();
+    this.applyGarbage();
+    /* ★ 패배 조건 (표준 테트리스): 블럭이 플레이창 천장에 닿았을 때만!
+       = 고정된 블럭이 천장 위로 삐져나오거나, 맨 윗줄(0번째 줄)에 블럭이 남아있을 때 */
+    if(!this.over && (aboveCeiling || this.grid[0].some(v=>v))){
+      this.over=true; this.opts.onOver&&this.opts.onOver(this); return;
+    }
+    if(!this.over) this.spawn();
+  }
+  clearLines(){
+    let cleared=[], gems=0;
+    for(let y=CH-1;y>=0;y--){
+      if(this.grid[y].every(v=>v)){ 
+        gems += this.grid[y].filter(v=>v.gem).length;
+        cleared.push(y);
+      }
+    }
+    if(!cleared.length){ this.combo=0; return; }
+    // 줄 제거
+    const rows=new Set(cleared);
+    this.grid=this.grid.filter((_,y)=>!rows.has(y));
+    while(this.grid.length<CH)this.grid.unshift(Array(CW).fill(null));
+    const n=cleared.length;
+    this.lines+=n; this.combo++;
+    this.score += [0,100,300,500,800][n]*this.stage + (this.combo-1)*50;
+    /* ★ 클래식 스테이지 클리어 규칙: 줄 10개를 지울 때마다 스테이지 +1 (속도 상승) */
+    const newStage = Math.floor(this.lines/this.LINES_PER_STAGE)+1;
+    if(newStage>this.stage){ this.stage=newStage; this.opts.onStage && this.opts.onStage(this,this.stage); }
+    if(this.opts.isPlayer) playSfx(["","sfx_line1","sfx_line2","sfx_line3","sfx_tetris"][n]); // 🔊 줄 지우기
+    this.opts.fx && this.opts.fx.lineClear(cleared, n, this.combo);
+    this.opts.onLines && this.opts.onLines(this, n, gems, cleared);
+  }
+  addGarbage(n){ // 상대 공격 예약 (방패로 방어 가능)
+    if(this.shield>0){ const blocked=Math.min(this.shield,n); this.shield-=blocked; n-=blocked;
+      if(this.opts.isPlayer&&blocked)toast(T("tShield",{n:blocked})); }
+    this.pendingGarbage+=n;
+  }
+  applyGarbage(){
+    let n=this.pendingGarbage; if(!n)return; this.pendingGarbage=0;
+    n=Math.min(n,8);
+    for(let i=0;i<n;i++){
+      this.grid.shift();
+      const hole=ri(0,CW-1);
+      this.grid.push(Array.from({length:CW},(_,x)=>x===hole?null:{c:8,gem:false}));
+    }
+    /* 공격줄이 밀어올려도 게임을 직접 끝내지 않음 - 천장(맨 윗줄) 판정은 lock에서 통일 */
+    if(!this.over && this.grid[0].some(v=>v)){ this.over=true; this.opts.onOver&&this.opts.onOver(this); }
+  }
+  ghostY(){ let y=this.cur.y; while(!this.collide(this.cur.m,this.cur.x,y+1))y++; return y; }
+  quickMove(dx,dy,cells,iv){ // ⚡ 퀵무브(Z/C/X): cells칸을 iv(ms)마다 1칸씩 빠르게 이동/하강
+    if(this.over)return;
+    this.qMove={dx,dy,left:Math.max(1,cells|0),iv:Math.max(0,+iv||0),acc:0};
+  }
+  update(dt, softHeld){ // dt: ms
+    if(this.over)return;
+    if(this.qMove){ // ⚡ 퀵무브 처리 (중력과 별개, 설정된 속도로 애니메이션 이동)
+      const q=this.qMove; q.acc+=dt;
+      while(this.qMove && (q.iv<=0 || q.acc>=q.iv)){
+        if(q.iv>0)q.acc-=q.iv;
+        const ok = q.dy ? this.step() : this.move(q.dx); // 아래=step(바닥이면 고정), 좌우=move
+        if(!ok || --q.left<=0) this.qMove=null;
+      }
+    }
+    let spd=this.baseSpeed();
+    if(softHeld || this.softBurst>0) spd/=3;      // ▼ 꾹: 3배속
+    this.dropAcc+=dt;
+    while(this.dropAcc>=spd){
+      this.dropAcc-=spd;
+      const moved=this.step();
+      if(this.softBurst>0){ this.softBurst--; if(!moved)this.softBurst=0; }
+      if(!moved)break;
+    }
+  }
+}
+
+/* ============================================================
+   4. 렌더링 & 이펙트 (별, 블라스터, 폭발)
+   ============================================================ */
+const boardCv=$("board"), bctx=boardCv.getContext("2d");
+const fxCv=$("fx"), fctx=fxCv.getContext("2d");
+const oppCv=$("oppBoard"), octx=oppCv.getContext("2d");
+const nextCv=$("nextCv"), nctx=nextCv.getContext("2d");
+let CELL=24;
+
+function sizeBoard(){
+  const area=document.querySelector(".game-area");
+  const h=area.clientHeight-8, w=area.clientWidth;
+  CELL=Math.floor(Math.min(h/CH, (w*0.62)/CW));
+  CELL=clamp(CELL,14,34);
+  boardCv.width=CW*CELL; boardCv.height=CH*CELL;
+  fxCv.width=boardCv.width; fxCv.height=boardCv.height;
+  fxCv.style.width=boardCv.width+"px"; fxCv.style.height=boardCv.height+"px";
+}
+function drawCell(ctx,x,y,size,color,gem,glass){
+  const p=size*0.08;
+  if(glass){ /* 🍬 유리 보석(Glass Gem): 고정된 블럭 전용 - 반투명 + 네온 림 */
+    ctx.save();
+    ctx.globalAlpha=0.62;
+    ctx.fillStyle=color;
+    roundRect(ctx,x+p,y+p,size-2*p,size-2*p,size*0.24); ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.lineWidth=Math.max(1.4,size*0.09);
+    ctx.strokeStyle=color; // 네온 와이어프레임 림
+    roundRect(ctx,x+p,y+p,size-2*p,size-2*p,size*0.24); ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,.55)"; // 유리 반사광
+    ctx.beginPath(); ctx.ellipse(x+size*0.34,y+size*0.3,size*0.16,size*0.09,-0.6,0,7); ctx.fill();
+    ctx.restore();
+  } else {
+  ctx.fillStyle=color;
+  roundRect(ctx,x+p,y+p,size-2*p,size-2*p,size*0.22); ctx.fill();
+  // 사탕 광택
+  ctx.fillStyle="rgba(255,255,255,.35)";
+  roundRect(ctx,x+p+size*0.12,y+p+size*0.1,size*0.45,size*0.22,size*0.12); ctx.fill();
+  ctx.fillStyle="rgba(0,0,0,.14)";
+  roundRect(ctx,x+p,y+size*0.62,size-2*p,size*0.28,size*0.14); ctx.fill();
+  }
+  if(gem){ // 보석(뽑기 아이템) 표시
+    ctx.save(); ctx.translate(x+size/2,y+size/2);
+    ctx.fillStyle=GEM_COLOR; ctx.strokeStyle="#c98d1e"; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5, a2=a+Math.PI/5;
+      ctx.lineTo(Math.cos(a)*size*0.32,Math.sin(a)*size*0.32);
+      ctx.lineTo(Math.cos(a2)*size*0.14,Math.sin(a2)*size*0.14);}
+    ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function renderBoard(g,ctx,cell,drawGhost,bgActive){
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  if(bgActive){ ctx.fillStyle="rgba(24,17,44,.42)"; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height); } // 그림 위 가독성 필터
+  if(performance.now()<g.blindUntil){ // 🙈 깜깜이 모자: 블럭이 전부 안 보임!
+    ctx.fillStyle="rgba(12,8,24,.94)"; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    ctx.font=`${cell*2.2}px sans-serif`; ctx.textAlign="center";
+    ctx.fillText("🙈", ctx.canvas.width/2, ctx.canvas.height/2);
+    ctx.font=`${cell*0.9}px sans-serif`;
+    ctx.fillText("?", ctx.canvas.width*0.3, ctx.canvas.height*0.3);
+    ctx.fillText("?", ctx.canvas.width*0.7, ctx.canvas.height*0.72);
+    return;
+  }
+  // 은은한 격자
+  ctx.strokeStyle="rgba(255,255,255,.04)";
+  for(let x=1;x<CW;x++){ctx.beginPath();ctx.moveTo(x*cell,0);ctx.lineTo(x*cell,CH*cell);ctx.stroke();}
+  for(let y=1;y<CH;y++){ctx.beginPath();ctx.moveTo(0,y*cell);ctx.lineTo(CW*cell,y*cell);ctx.stroke();}
+  const bstr = styleNow()==="buster";
+  g.grid.forEach((row,y)=>row.forEach((v,x)=>{ if(v)drawCell(ctx,x*cell,y*cell,cell,COL(v.c),v.gem,bstr); }));
+  if(g.over||!g.cur)return;
+  if(drawGhost){
+    const gy=g.ghostY();
+    if(bstr){ /* 🍬 낙하지점 조명(Drop Zone Beacon): 윤곽 고스트 폐지 → 착지 칸이 은은히 빛나고 바닥선이 발광 */
+      const bottoms={};
+      g.cur.m.forEach((row,y)=>row.forEach((v,x)=>{ if(!v)return;
+        const gx=g.cur.x+x, gyy=gy+y;
+        ctx.fillStyle="rgba(255,240,255,.13)";
+        roundRect(ctx,gx*cell+2,gyy*cell+2,cell-4,cell-4,cell*0.24); ctx.fill();
+        bottoms[gx]=Math.max(bottoms[gx]??-1,gyy);
+      }));
+      for(const gx in bottoms){ const by=(bottoms[gx]+1)*cell;
+        ctx.fillStyle="rgba(255,158,198,.25)"; ctx.fillRect(gx*cell+1,by-4,cell-2,4);
+        ctx.fillStyle="rgba(255,255,255,.85)"; ctx.fillRect(gx*cell+cell*0.2,by-2,cell*0.6,2);
+      }
+    } else { // 🧱 히든모드: 원본 고스트 그대로
+      ctx.globalAlpha=.22;
+      g.cur.m.forEach((row,y)=>row.forEach((v,x)=>{ if(v)drawCell(ctx,(g.cur.x+x)*cell,(gy+y)*cell,cell,COL(v),false); }));
+      ctx.globalAlpha=1;
+    }
+  }
+  g.cur.m.forEach((row,y)=>row.forEach((v,x)=>{
+    if(!v)return; const py=g.cur.y+y; if(py<0)return;
+    const gem=g.cur.gemCell&&g.cur.gemCell[0]===x&&g.cur.gemCell[1]===y;
+    drawCell(ctx,(g.cur.x+x)*cell,py*cell,cell,COL(v),gem,false);
+  }));
+  if(g.fogUntil && performance.now()<g.fogUntil){ // 🌫 안개: 뿌옇게 (희미하게는 보임)
+    ctx.fillStyle="rgba(205,212,232,.55)"; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    ctx.font=`${cell*1.6}px sans-serif`; ctx.textAlign="center";
+    ctx.fillText("🌫️", ctx.canvas.width/2, ctx.canvas.height*0.4);
+  }
+}
+function renderNext(g){
+  nctx.clearRect(0,0,nextCv.width,nextCv.height);
+  const m=SHAPES[g.next], s=14;
+  const ox=(nextCv.width-m.length*s)/2, oy=(nextCv.height-m.length*s)/2+2;
+  m.forEach((row,y)=>row.forEach((v,x)=>{ if(v)drawCell(nctx,ox+x*s,oy+y*s,s,COL(v),false,false); }));
+}
+
+function renderNextCapsule(g){ /* 🔮 캡슐 안에 다음 블럭 렌더 */
+  const cv=$("capsuleCv"), c=cv.getContext("2d");
+  c.clearRect(0,0,cv.width,cv.height);
+  const m=busterShapeOf(g.next), s=Math.floor(40/m.length);
+  const ox=(cv.width-m.length*s)/2, oy=(cv.height-m.length*s)/2;
+  m.forEach((row,y)=>row.forEach((v,x)=>{ if(v)drawCell(c,ox+x*s,oy+y*s,s,COL(v),false,false); }));
+}
+
+/* ---------- 파티클 이펙트 ---------- */
+const parts=[]; const floats=[]; const beams=[]; const melts=[]; // melts: 🍬캔디 멜팅 줄삭제 연출
+const FX={
+  blaster(cur,fromY){ // 하드드롭 광선
+    for(let x=0;x<cur.m.length;x++){
+      let has=false; for(let y=0;y<cur.m.length;y++) if(cur.m[y][x])has=true;
+      if(has) beams.push({x:(cur.x+x)*CELL, y0:Math.max(0,fromY)*CELL, y1:(cur.y+cur.m.length)*CELL, life:1});
+    }
+  },
+  impact(cur){ // 내려꽂힘 스파크
+    const cx=(cur.x+cur.m.length/2)*CELL, cy=(cur.y+cur.m.length)*CELL;
+    for(let i=0;i<16;i++) parts.push({x:cx+rand(-CELL,CELL),y:cy,vx:rand(-2,2),vy:rand(-4,-1),life:1,size:rand(2,4),color:"#fff",type:"dot"});
+    shakeBoard();
+  },
+  lineClear(rows,n,combo){ // 줄 수에 따라 점점 화려하게
+    const buster=styleNow()==="buster";
+    const cnt=[0,10,26,46,90][n];
+    if(buster){ /* 🍬 캔디 멜팅: 줄이 좌우로 녹아 흐르며 사라짐 */
+      rows.forEach(y=>melts.push({y:y*CELL,life:1}));
+    }
+    rows.forEach(y=>{
+      for(let i=0;i<cnt/n;i++){
+        parts.push({x:rand(0,CW*CELL),y:y*CELL+CELL/2,vx:rand(-3,3),vy:rand(-5,-1),life:1,
+          size:rand(n>=3?8:5, n>=3?16:10),
+          color: buster?["#ff9ec6","#8df0c8","#ffe08a","#d88bff","#86c8ff"][ri(0,4)]
+                       :["#ffd66b","#ff8fb1","#6fe8cf","#c39bff","#7fc4ff"][ri(0,4)],
+          type: buster?"candy":"star", /* 🍬 별사탕 캔디가 팡 터지는 크래시 파티클 */
+          spin:rand(-0.2,0.2)});
+      }
+    });
+    if(n===4){ // 4줄 대폭발
+      for(let i=0;i<50;i++) parts.push({x:CW*CELL/2,y:rows[0]*CELL,vx:rand(-7,7),vy:rand(-8,2),life:1.4,size:rand(6,18),
+        color:`hsl(${ri(0,360)},90%,${buster?78:70}%)`,type:buster?"candy":"star",spin:rand(-0.3,0.3)});
+      floats.push({text:T(styleNow()==="buster"?"tQuad":"tTetris"),x:CW*CELL/2,y:rows[0]*CELL,life:1.6,size:30});
+      shakeBoard();
+    } else if(n>=2){
+      floats.push({text:n===2?T("tDouble"):T("tTriple"),x:CW*CELL/2,y:rows[0]*CELL,life:1.2,size:22});
+    } else {
+      floats.push({text:"✦",x:rand(CELL*2,CW*CELL-CELL*2),y:rows[0]*CELL,life:0.9,size:20});
+    }
+    if(combo>=2) floats.push({text:combo+" "+T("tCombo"),x:CW*CELL/2,y:rows[0]*CELL+30,life:1.2,size:18});
+  },
+  starFly(n){ // 별 획득 연출 (갓차 화폐)
+    for(let i=0;i<n;i++) setTimeout(()=>{
+      floats.push({text:"⭐",x:rand(30,CW*CELL-30),y:CH*CELL*0.4,life:1,size:18,rise:2.4});
+    },i*90);
+  }
+};
+FX.gemLock=function(cells){ /* 🍬 블럭 고정 순간: 유리보석 반짝(글린트) */
+  cells.forEach(([gx,gy])=>{ if(Math.random()<0.7)
+    parts.push({x:(gx+0.5)*CELL,y:(gy+0.4)*CELL,vx:rand(-.3,.3),vy:-0.5,life:0.5,size:rand(2,4),color:"#ffffff",type:"glint"});});
+};
+function shakeBoard(){const w=$("boardWrap");w.classList.remove("shake");void w.offsetWidth;w.classList.add("shake");}
+function drawFX(dt){
+  fctx.clearRect(0,0,fxCv.width,fxCv.height);
+  for(let i=beams.length-1;i>=0;i--){const b=beams[i];b.life-=dt*4;
+    if(b.life<=0){beams.splice(i,1);continue;}
+    const g=fctx.createLinearGradient(0,b.y0,0,b.y1);
+    g.addColorStop(0,"rgba(255,214,107,0)");g.addColorStop(1,`rgba(255,180,220,${b.life*0.7})`);
+    fctx.fillStyle=g; fctx.fillRect(b.x+CELL*0.15,b.y0,CELL*0.7,b.y1-b.y0);
+  }
+  for(let i=melts.length-1;i>=0;i--){ const m=melts[i]; m.life-=dt*2.2; // 🍬 캔디 멜팅
+    if(m.life<=0){melts.splice(i,1);continue;}
+    const t=1-m.life, half=CW*CELL/2, h=CELL*0.8;
+    fctx.globalAlpha=clamp(m.life,0,1);
+    const g1=fctx.createLinearGradient(0,m.y,0,m.y+h);
+    g1.addColorStop(0,"#ffd1e6"); g1.addColorStop(1,"#ff9ec6");
+    fctx.fillStyle=g1;
+    roundRect(fctx,-half*t, m.y+CELL*0.1+t*4, half, h*(1-t*0.4), 8); fctx.fill();        // 왼쪽으로 흘러내림
+    roundRect(fctx, half+half*t, m.y+CELL*0.1+t*4, half, h*(1-t*0.4), 8); fctx.fill();   // 오른쪽으로 흘러내림
+    for(let d=0;d<3;d++){ fctx.beginPath(); fctx.arc(rand(0,CW*CELL), m.y+h+t*CELL*1.5+d*4, 2.5, 0, 7); fctx.fill(); } // 방울
+  }
+  fctx.globalAlpha=1;
+  for(let i=parts.length-1;i>=0;i--){const p=parts[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life-=dt*1.4;
+    if(p.life<=0){parts.splice(i,1);continue;}
+    fctx.globalAlpha=clamp(p.life,0,1);
+    if(p.type==="star"){ fctx.save();fctx.translate(p.x,p.y);fctx.rotate((p.spin||0)*performance.now()/16);
+      fctx.fillStyle=p.color; starPath(fctx,p.size); fctx.fill(); fctx.restore();
+    } else if(p.type==="candy"){ // 🍬 별사탕 캔디 파티클 (광택 구슬)
+      fctx.fillStyle=p.color; fctx.beginPath(); fctx.arc(p.x,p.y,p.size,0,7); fctx.fill();
+      fctx.fillStyle="rgba(255,255,255,.75)"; fctx.beginPath(); fctx.arc(p.x-p.size*0.3,p.y-p.size*0.3,p.size*0.32,0,7); fctx.fill();
+    } else if(p.type==="glint"){ // ✨ 유리보석 반짝
+      fctx.strokeStyle="#fff"; fctx.lineWidth=1.4; fctx.beginPath();
+      fctx.moveTo(p.x-p.size,p.y); fctx.lineTo(p.x+p.size,p.y);
+      fctx.moveTo(p.x,p.y-p.size); fctx.lineTo(p.x,p.y+p.size); fctx.stroke();
+    } else { fctx.fillStyle=p.color; fctx.beginPath();fctx.arc(p.x,p.y,p.size,0,7);fctx.fill(); }
+  }
+  fctx.globalAlpha=1;
+  for(let i=floats.length-1;i>=0;i--){const f=floats[i];
+    f.y-= (f.rise||1.0); f.life-=dt;
+    if(f.life<=0){floats.splice(i,1);continue;}
+    fctx.globalAlpha=clamp(f.life,0,1);
+    fctx.font=`bold ${f.size}px Jua,sans-serif`;fctx.textAlign="center";
+    fctx.strokeStyle="rgba(26,19,48,.8)";fctx.lineWidth=4;fctx.strokeText(f.text,f.x,f.y);
+    fctx.fillStyle="#fff";fctx.fillText(f.text,f.x,f.y);
+  }
+  fctx.globalAlpha=1;
+}
+function starPath(ctx,r){ctx.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5,a2=a+Math.PI/5;
+  ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);ctx.lineTo(Math.cos(a2)*r*0.45,Math.sin(a2)*r*0.45);}ctx.closePath();}
+
+/* ============================================================
+   5. 갓차 (로또 추첨기) - 향후 과금/아이템 추가가 쉬운 구조
+   ============================================================ */
+/* 🧩 저장된 커스텀 블럭 세트 로드: 게임 재시작 시 바로 반영 */
+applyBusterSet(store.get("busterPieces", DEFAULT_BUSTER_SET));
+
+const GACHA_COST=5;
+const ITEMS=[ // 새 아이템은 여기에 한 줄만 추가! (이름/설명은 I18N의 item_ID_n / item_ID_d)
+  /* 나를 돕는 아이템 */
+  {id:"bomb",    icon:"💣", rar:2, w:12, cap:"#ff8fb1", self:true },  // 바닥 2줄 삭제
+  {id:"clear",   icon:"🧹", rar:3, w:4,  cap:"#ffd66b", self:true },  // 바닥 4줄 청소 (초레어)
+  {id:"shield",  icon:"🛡️", rar:2, w:12, cap:"#7fc4ff", self:true },  // 공격 2줄 방어
+  {id:"slow",    icon:"🐢", rar:1, w:12, cap:"#6fe8cf", self:true },  // 내 블럭 10초 슬로우
+  {id:"candy",   icon:"🍬", rar:1, w:20, cap:"#ffb36b", self:true },  // 별 +3
+  /* 상대를 방해하는 아이템 (밸런스: 즉사 없음, 회복 가능한 방해만) */
+  {id:"attack",  icon:"🌠", rar:2, w:8,  cap:"#c39bff", self:false},  // 즉시 2줄 공격
+  {id:"tornado", icon:"🌪️", rar:2, w:10, cap:"#9ef07f", self:false},  // 상대 바닥 3줄 뒤섞기
+  {id:"zap",     icon:"⚡", rar:2, w:10, cap:"#ffe066", self:false},  // 상대 8초 가속
+  {id:"fog",     icon:"🌫️", rar:3, w:5,  cap:"#cfd6e6", self:false},  // 상대 6초 혼란
+  {id:"blind",   icon:"🙈", rar:2, w:8,  cap:"#8d7bb8", self:false},  // 상대 블럭 5초 안 보임
+  {id:"mirror",  icon:"🔀", rar:2, w:8,  cap:"#ff9de2", self:false},  // 상대 좌우 5초 반전
+  {id:"holes",   icon:"🧀", rar:3, w:4,  cap:"#ffe8a3", self:false},  // 상대 각 줄에 구멍 1개
+]; // ※ 어떤 아이템도 게임을 즉시 끝내지 않음. 승패는 오직 블럭이 꼭대기까지 차올랐을 때만!
+const itemName=it=>T("item_"+it.id+"_n"), itemDesc=it=>T("item_"+it.id+"_d");
+let capsuleQueue=[]; // [지금 뽑을 구슬(보임), 대기1(안 보임), 대기2(안 보임)]
+function rollItem(){ const total=ITEMS.reduce((s,i)=>s+i.w,0); let r=Math.random()*total;
+  for(const it of ITEMS){ if((r-=it.w)<0)return it; } return ITEMS[0]; }
+function refillCapsules(){ while(capsuleQueue.length<3)capsuleQueue.push(rollItem()); updateCapsuleView(); }
+function updateCapsuleView(){ $("capNow").style.background=capsuleQueue[0]?capsuleQueue[0].cap:"#999"; }
+/* ── 보유 아이템: 전체 5칸. 기본 3칸 사용 가능, 2칸은 잠금 🔒
+   [확장 포인트] 향후 유료 아이템 구매·이벤트 보상 등으로 해제하려면 UNLOCKED_SLOTS 값만 올리면 됨 */
+const INV_SIZE=5;
+let UNLOCKED_SLOTS=3;
+let inventory=Array(INV_SIZE).fill(null);
+function updateInv(){
+  document.querySelectorAll(".inv-slot").forEach((el,i)=>{
+    const locked = i>=UNLOCKED_SLOTS;
+    el.classList.toggle("locked",locked);
+    el.classList.toggle("full",!locked&&!!inventory[i]);
+    el.textContent = locked ? "🔒" : (inventory[i]?inventory[i].icon:"");
+  });
+}
+function gainItem(it){
+  const empty=inventory.findIndex((v,i)=>i<UNLOCKED_SLOTS&&!v);
+  if(empty<0){ toast(T("tBagFull",{i:it.icon})); addStars(2); return; }
+  inventory[empty]=it; updateInv();
+}
+/* ⭐별: 게임마다 0에서 시작. 줄을 지운 수만큼 쌓이고 게임 종료 시 초기화 */
+function addStars(n){ stars=Math.max(0,stars+n); $("hudStars").textContent=stars; if(n>0)FX.starFly(Math.min(n,5)); }
+
+/* ============================================================
+   5-B. 클래식 모드 뒷벽 배경 그림
+   ─ [관리자 안내] ────────────────────────────────────────────
+   · 아래 BACKGROUNDS 배열의 각 항목이 그림 1장 (id: BG-01 ~ BG-10 로 번호 관리)
+   · 그림 교체: src 값을 원하는 jpg/png 주소로 바꾸면 끝!
+     예) {id:"BG-03", src:"https://내저장소.com/photos/cat.jpg"}
+   · 원격 랜덤 로딩: 아래 REMOTE_BG_URLS 배열에 사진 주소를 넣으면
+     스테이지마다 그 목록에서 랜덤으로 불러옵니다. (비어있으면 기본 10장 사용)
+   · 그림은 항상 블럭이 움직이는 판 크기에 딱 맞게(cover) 표시되며 절대 밖으로 나가지 않습니다.
+   ──────────────────────────────────────────────────────────── */
+const REMOTE_BG_URLS=[]; // 예: ["https://.../pic1.jpg","https://.../pic2.jpg"]
+function cuteBG(id,c1,c2,emoji,label){ // 내장 귀여운 그림 생성기 (오프라인에서도 작동)
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+    <rect width="300" height="600" fill="url(#g)"/>
+    ${[...Array(14)].map(()=>`<circle cx="${ri(10,290)}" cy="${ri(10,590)}" r="${ri(2,5)}" fill="#ffffff" opacity="0.5"/>`).join("")}
+    <text x="150" y="300" font-size="130" text-anchor="middle">${emoji}</text>
+    <text x="150" y="400" font-size="34" text-anchor="middle">${emoji}${emoji}</text>
+    <text x="150" y="575" font-size="14" text-anchor="middle" fill="#ffffff" opacity="0.75" font-family="sans-serif">${id} · ${label}</text>
+  </svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+const BACKGROUNDS=[
+  {id:"BG-01", src:cuteBG("BG-01","#ffb3c8","#ff7aa2","🐱","cat")},
+  {id:"BG-02", src:cuteBG("BG-02","#a8e6ff","#5db9f0","🐧","penguin")},
+  {id:"BG-03", src:cuteBG("BG-03","#ffe3a3","#ffb36b","🐹","hamster")},
+  {id:"BG-04", src:cuteBG("BG-04","#c9f7d4","#6fd394","🐸","frog")},
+  {id:"BG-05", src:cuteBG("BG-05","#e3ccff","#a97ff0","🦄","unicorn")},
+  {id:"BG-06", src:cuteBG("BG-06","#ffd1dc","#ff8fb1","🍓","strawberry")},
+  {id:"BG-07", src:cuteBG("BG-07","#bde0fe","#7fa8f0","🐬","dolphin")},
+  {id:"BG-08", src:cuteBG("BG-08","#fff0b3","#ffd66b","🐥","chick")},
+  {id:"BG-09", src:cuteBG("BG-09","#d0f4de","#6fe8cf","🐢","turtle")},
+  {id:"BG-10", src:cuteBG("BG-10","#f1c6ff","#d78fff","🌸","blossom")},
+];
+let curBgIdx=-1, bgActive=false;
+function pickBg(){
+  if(REMOTE_BG_URLS.length){ return REMOTE_BG_URLS[ri(0,REMOTE_BG_URLS.length-1)]; }
+  let i; do{ i=ri(0,BACKGROUNDS.length-1); }while(i===curBgIdx&&BACKGROUNDS.length>1);
+  curBgIdx=i; return BACKGROUNDS[i].src;
+}
+function bgNewPicture(){ const im=$("bgImg"); im.classList.remove("complete"); /* 새 그림은 다시 30% 투명 */
+  im.style.backgroundImage=`url("${pickBg()}")`; setBgReveal(0,false); }
+/* 줄을 지운 비율만큼 위에서부터 그림 공개 (반짝이는 가장자리 이펙트와 함께) */
+function setBgReveal(ratio,sparkle){
+  ratio=clamp(ratio,0,1);
+  $("bgImg").style.clipPath=`inset(0 0 ${100-ratio*100}% 0)`;
+  const edge=$("bgEdge");
+  edge.style.top=`calc(${ratio*100}% - 3px)`;
+  edge.style.opacity=(ratio>0&&ratio<1)?1:0;
+  if(sparkle){ for(let i=0;i<8;i++) parts.push({x:rand(0,CW*CELL),y:ratio*CH*CELL,vx:rand(-1.5,1.5),vy:rand(-2.5,-0.5),
+    life:0.9,size:rand(3,7),color:"#fff3a8",type:"star",spin:rand(-0.2,0.2)}); }
+}
+
+/* ============================================================
+   6. 컴퓨터(AI) 플레이어 - 착지 위치를 평가해서 스스로 플레이
+   ============================================================ */
+class AIBrain{
+  constructor(game){ this.g=game; this.plan=null; this.timer=0; this.moveDelay=260; }
+  evaluate(grid){
+    let heights=Array(CW).fill(0), holes=0;
+    for(let x=0;x<CW;x++){ let seen=false;
+      for(let y=0;y<CH;y++){ if(grid[y][x]){ if(!seen){heights[x]=CH-y;seen=true;} } else if(seen)holes++; } }
+    const agg=heights.reduce((a,b)=>a+b,0);
+    let bump=0; for(let x=0;x<CW-1;x++)bump+=Math.abs(heights[x]-heights[x+1]);
+    let full=0; for(let y=0;y<CH;y++) if(grid[y].every(v=>v))full++;
+    return -0.51*agg + 0.76*full*10 - 0.86*holes - 0.18*bump;
+  }
+  think(){
+    const g=this.g, cur=g.cur; let best=null;
+    const fogged = performance.now()<(this.fogUntil||0); // 🌫 안개: 판단력 흐림
+    let m=cur.m.map(r=>[...r]);
+    for(let rot=0;rot<4;rot++){
+      for(let x=-3;x<CW;x++){
+        if(g.collide(m,x,cur.y))continue;
+        let y=cur.y; while(!g.collide(m,x,y+1))y++;
+        // 가상 보드에 놓아보기
+        const sim=g.grid.map(r=>r.map(v=>v?1:0));
+        let bad=false;
+        m.forEach((row,dy)=>row.forEach((v,dx)=>{ if(v){const gy=y+dy;if(gy<0){bad=true;return;}sim[gy][x+dx]=1;} }));
+        if(bad)continue;
+        const score=this.evaluate(sim)+(fogged?rand(-5,5):rand(-0.4,0.4)); // 안개면 큰 실수 유발
+        if(!best||score>best.score)best={score,rot,x};
+      }
+      m=rotateM(m,1);
+    }
+    this.plan=best;
+  }
+  update(dt){
+    const g=this.g; if(g.over)return;
+    if(!this.plan)this.think();
+    this.timer+=dt*1000;
+    if(this.timer<this.moveDelay)return;
+    this.timer=0;
+    const p=this.plan; if(!p){g.hardDrop();this.plan=null;return;}
+    if(p.rot>0){ g.rotate(1); p.rot--; return; }
+    if(g.cur.x<p.x){ if(!g.move(1))p.x=g.cur.x; return; }
+    if(g.cur.x>p.x){ if(!g.move(-1))p.x=g.cur.x; return; }
+    g.hardDrop(); this.plan=null;
+    if(Math.random()<0.06)showOppEmote(["😀","😎","🔥","😱"][ri(0,3)]);
+  }
+}
+
+/* ============================================================
+   7. 게임 매치 관리 (모드/승패/재대결)
+   ============================================================ */
+let match=null; // {me, cpu(옵션), brain, mode, players, running}
+let lastT=0, softHeld=false, gameOverTimer=null;
+
+function newMatch(cfg){
+  const fxHook=FX;
+  /* 승패 규칙(명확): 새 블럭이 나올 자리가 없거나(=화면이 꼭대기까지 참) 블럭이 더는 들어갈 수 없을 때만 게임 종료.
+     아이템은 절대 게임을 직접 끝내지 못함. */
+  const style=cfg.style||settings.gameStyle;
+  setBoardDims(style); // 🍬 12×22 / 🧱 10×20 자동 연동
+  const me=new Tetris({isPlayer:true, mode:cfg.mode, style, fx:fxHook,
+    onLines:(g,n,gems)=>onMyLines(n,gems),
+    onStage:(g,s)=>onMyStage(s),
+    onOver:()=>endMatch(false)});
+  let cpu=null, brain=null;
+  if(cfg.net==="online"){ // 🌐 온라인: 상대는 사람 → 화면 미러만 (AI 없음)
+    cpu=makeRemoteOpp();
+  } else if(cfg.players!=="solo"){
+    cpu=new Tetris({isPlayer:false, mode:cfg.mode, style,
+      onLines:(g,n)=>onCpuLines(n),
+      onOver:()=>endMatch(true)});
+    brain=new AIBrain(cpu);
+    brain.moveDelay = cfg.players==="vsN" ? 300 : 240; // 다수전은 조금 느긋하게
+  }
+  match={me,cpu,brain,...cfg,style,running:false};
+  if(cfg.net==="online"&&cfg.opp){ const rv=meta.rivals[cfg.opp.name];
+    if(rv) setTimeout(()=>toast(T("tRivalInfo",{o:cfg.opp.name,w:rv.w,l:rv.l}),2200),400); } // ⚔️ 상대전적
+  /* ⭐별 초기화: 게임마다 0부터 */
+  stars=0; $("hudStars").textContent=0;
+  $("hudScore").innerHTML=T("score")+" <b>0</b>"; $("hudLines").innerHTML=T("lines")+" <b>0</b>";
+  const isClassic = cfg.mode==="classic";
+  $("stageBox").style.display = isClassic ? "" : "none";
+  $("stageNum").textContent="1"; $("stageFill").style.width="0%"; $("stageRule").textContent="0 / "+me.LINES_PER_STAGE;
+  /* 클래식: 뒷벽 그림 시작 (판 크기에 딱 맞게, 스테이지마다 교체) */
+  bgActive = isClassic;
+  $("bgLayer").style.display = isClassic ? "block" : "none";
+  if(isClassic) bgNewPicture();
+  const busterUI = style==="buster";
+  $("nextBox").style.display = busterUI ? "none" : "";          // 🔮 캡슐이 대신함
+  $("capsule").style.display = busterUI ? "flex" : "none";
+  $("sidePanel").style.display = (busterUI && !isClassic) ? "none" : ""; // 스테이지 박스 없으면 통째로 숨김
+  $("oppPanel").style.display = cpu ? "flex" : "none";
+  $("oppPanel").className=settings.oppPos;
+  $("oppPanel").classList.remove("danger");
+  $("dangerVeil").style.display="none";
+  $("sidePanel").className = settings.oppPos==="right" ? "left" : "right";
+  $("oppName").textContent = cfg.net==="online" && cfg.opp
+    ? `${tierOf(cfg.opp.rp).i}${cfg.opp.name} 🏆${cfg.opp.wins||0}${streakBadge(cfg.opp.streak)?" "+streakBadge(cfg.opp.streak)+cfg.opp.streak:""}`
+    : (cfg.players==="vsN" ? T("oCpu")+" ×5" : T("oCpu"));
+  $("oppStatus").textContent="";
+  $("emoteToggle").style.display = cpu ? "" : "none";
+  const itemMode = cfg.mode==="fightItem";
+  $("starPill").style.display = itemMode ? "" : "none"; // 별은 아이템 모드에서만 의미 있음
+  $("gachaDock").style.display = itemMode ? "flex" : "none";
+  $("invDock").style.display = itemMode ? "flex" : "none";
+  $("attackDock").style.display = itemMode ? "flex" : "none";
+  $("incoming").style.display = itemMode ? "block":"none";
+  applyDocks();
+  atkStock=0; updateAtk();
+  inventory=Array(INV_SIZE).fill(null); updateInv();
+  refillCapsules();
+  sizeBoard();
+  startCountdown();
+}
+function startCountdown(){
+  const el=$("startCount"); let n=3; el.style.display="flex"; el.textContent=n;
+  const iv=setInterval(()=>{ n--;
+    if(n<=0){ clearInterval(iv); el.style.display="none"; match.running=true; lastT=performance.now(); }
+    else el.textContent=n;
+  },700);
+}
+
+/* ---- 줄 삭제 시 모드별 처리 ---- */
+let atkStock=0;
+function onMyLines(n,gems){
+  questProgress("lines",n); // 📜 일일 퀘스트: 줄 지우기
+  $("hudScore").innerHTML=T("score")+" <b>"+match.me.score+"</b>";
+  $("hudLines").innerHTML=T("lines")+" <b>"+match.me.lines+"</b>";
+  if(match.mode==="classic"){ // 스테이지 진행 & 뒷벽 그림 공개 (지운 비율만큼 위에서부터)
+    const per=match.me.LINES_PER_STAGE, prog=match.me.lines%per;
+    $("stageNum").textContent=match.me.stage;
+    $("stageFill").style.width=(prog/per*100)+"%";
+    $("stageRule").textContent=prog+" / "+per;
+    if(prog>0) setBgReveal(prog/per,true);
+  }
+  if(match.mode==="fight" && match.cpu){        // 즉시 반격 모드
+    const g = n>1 ? n : 0;                       // 2줄 이상부터 공격
+    if(g){ multiAttack(g); }
+  }
+  if(match.mode==="fightItem"){                 // 별 축적 + 공격버튼 모드
+    addStars(n + (gems? gems*3 : 0));           // 줄 지운 수만큼 별이 쌓임
+    if(gems){ toast(T("tGem")); revealCapsule(); }
+    if(n>1){ atkStock+=n; updateAtk(); }
+  }
+}
+function onMyStage(s){ // ★ 스테이지 클리어! 그림 100% 공개 → 축하 → 새 그림
+  playSfx("sfx_stage"); // 🔊
+  if(!REMOTE_BG_URLS.length && BACKGROUNDS[curBgIdx]) collectBg(BACKGROUNDS[curBgIdx].id); // 🖼 도감 수집
+  toast(T("tStageUp",{n:s-1}));
+  if(match&&match.mode==="classic"){
+    setBgReveal(1,true);
+    $("bgImg").classList.add("complete"); // 완성! 30% 투명 해제 → 정확하게 보임
+    for(let i=0;i<40;i++) parts.push({x:rand(0,CW*CELL),y:rand(0,CH*CELL),vx:rand(-3,3),vy:rand(-4,0),
+      life:1.3,size:rand(5,14),color:`hsl(${ri(0,360)},90%,72%)`,type:"star",spin:rand(-0.3,0.3)});
+    setTimeout(()=>{ if(match&&match.mode==="classic")bgNewPicture(); },1600);
+  }
+}
+function onCpuLines(n){
+  $("oppStatus").textContent=T("lines")+" "+match.cpu.lines;
+  if((match.mode==="fight"||match.mode==="fightItem") && n>1){
+    const dmg = match.players==="vsN" ? Math.min(n,2) : n; // 다수전 밸런스
+    receiveAttack(dmg);
+  }
+}
+/* ---- 공격 주고받기: 누가→누구인지 화면에 명확히 표시 ---- */
+function multiAttack(n){ // 내가 상대에게
+  playSfx("sfx_attack_send"); // 🔊 공격 발사
+  if(match.net==="online"){ netSend({t:"relay",k:"atk",n}); }
+  else { if(!match.cpu)return; match.cpu.addGarbage(n); }
+  toast(T("tAtkSent",{n}));
+  hitFloat($("oppPanel"),"+"+n+" ⬛","#ff5470");        // 상대 미니화면 위 +N줄
+  $("oppPanel").classList.remove("flash-red"); void $("oppPanel").offsetWidth; $("oppPanel").classList.add("flash-red");
+  for(let i=0;i<10;i++) parts.push({x:CW*CELL/2,y:CH*CELL*0.3,vx:rand(2,6)*(settings.oppPos==="right"?1:-1),vy:rand(-3,1),
+    life:0.8,size:rand(4,8),color:"#ff8fb1",type:"star",spin:0.2}); // 내 화면→상대 쪽으로 날아가는 별
+}
+function receiveAttack(n){ // 상대가 나에게
+  playSfx("sfx_hit"); // 🔊 피격 경보
+  match.me.addGarbage(n);
+  toast(T("tAtkIn",{o:$("oppName").textContent,n}));
+  hitFloat($("boardWrap"),"+"+n+" ⬛","#ff3355");        // 내 화면에 +N줄 경고
+  $("boardWrap").classList.remove("flash-red"); void $("boardWrap").offsetWidth; $("boardWrap").classList.add("flash-red");
+  updateIncoming();
+}
+function hitFloat(parent,text,color){
+  const el=document.createElement("div"); el.className="hit-float"; el.textContent=text;
+  if(color)el.style.textShadow="0 0 8px "+color+",0 2px 0 #000";
+  parent.appendChild(el); setTimeout(()=>el.remove(),1400);
+}
+function updateAtk(){ $("atkCnt").textContent=atkStock; $("atkBtn").classList.toggle("pulse",atkStock>0); }
+function updateIncoming(){ $("incomingFill").style.height = clamp(match.me.pendingGarbage*15,0,100)+"%"; }
+
+/* ---- 갓차 (로또 추첨기) ---- */
+function revealCapsule(){ const m=$("gachaMachine"); m.classList.remove("spinning"); void m.offsetWidth; m.classList.add("spinning");
+  const it=capsuleQueue[0]; toast(T("tCapNow",{i:it.icon,n:itemName(it)})); }
+function drawGacha(){ // 뽑기 (버튼/터치/키보드 Q) - 재확인 없이 즉시 뽑고 말풍선으로만 알림
+  if(!match||match.mode!=="fightItem"||!match.running)return;
+  if(stars<GACHA_COST){ toast(T("tNoStars",{n:GACHA_COST})); return; }
+  addStars(-GACHA_COST);
+  playSfx("sfx_gacha"); // 🔊 뽑기
+  const m=$("gachaMachine"); m.classList.remove("spinning"); void m.offsetWidth; m.classList.add("spinning");
+  const it=capsuleQueue.shift(); refillCapsules();
+  setTimeout(()=>{ gachaBubble(it); gainItem(it); },450); // 게임은 멈추지 않음
+}
+function gachaBubble(it){
+  const b=$("gachaBubble");
+  b.innerHTML=`🎉 ${it.icon} ${itemName(it)} <span class="rarity r${it.rar}" style="font-size:10px">${T("rar"+it.rar)}</span>`;
+  b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
+  clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove("show"),2200);
+}
+function useFirstItem(){ // 보유 아이템 중 첫 번째 사용 (버튼/터치/키보드 E)
+  if(!match||!match.running)return;
+  const i=inventory.findIndex(v=>v);
+  if(i<0){ toast(T("tNoItem")); return; }
+  useItem(inventory[i]); inventory[i]=null; updateInv();
+}
+$("gachaMachine").addEventListener("click",drawGacha);
+$("drawBtn").addEventListener("click",drawGacha);
+$("useBtn").addEventListener("click",useFirstItem);
+/* ---- 아이템 사용: 누가 → 누구에게, 무슨 효과인지 배너 + 이펙트로 표시 ---- */
+function announceItem(userName,targetText,it){
+  $("ibIcon").textContent=it.icon;
+  $("ibWho").textContent=T("selfUse",{u:userName})+" → "+targetText;
+  $("ibName").textContent=it.icon+" "+itemName(it);
+  $("ibDesc").textContent=itemDesc(it);
+  const b=$("itemBanner"); b.classList.add("show");
+  clearTimeout(announceItem._t); announceItem._t=setTimeout(()=>b.classList.remove("show"),2300);
+}
+document.querySelectorAll(".inv-slot").forEach(el=>{
+  el.addEventListener("click",()=>{
+    const i=+el.dataset.i;
+    if(i>=UNLOCKED_SLOTS){ toast(T("tLocked")); return; } // 🔒 잠긴 칸 (향후 확장)
+    const it=inventory[i]; if(!it||!match||!match.running)return;
+    useItem(it); inventory[i]=null; updateInv();
+  });
+});
+function oppFx(cls){ const p=$("oppPanel"); p.classList.remove(cls); void p.offsetWidth; p.classList.add(cls); }
+/* 아이템 효과 문구: 현재 블럭·그림자가 있는 세로줄을 피해서(반대편에) 표시 → 절대 가리지 않음 */
+function safeFloat(text,size){
+  if(!match)return;
+  const cur=match.me.cur;
+  const curCx = cur ? (cur.x+cur.m.length/2)*CELL : CW*CELL/2;
+  const x = curCx < CW*CELL/2 ? CW*CELL*0.74 : CW*CELL*0.26; // 블럭이 왼쪽이면 오른쪽에, 오른쪽이면 왼쪽에
+  floats.push({text,x,y:CH*CELL*0.3,life:1.4,size:size||22});
+}
+function useItem(it){
+  const me=match.me, cpu=match.cpu;
+  const target = it.self ? T("toMe") : T("toOpp",{o:$("oppName").textContent});
+  announceItem(settings.name,target,it);
+  playSfx(it.self?"sfx_item_self":"sfx_item_attack"); // 🔊 아이템 사용
+  safeFloat(T("item_"+it.id+"_f")); // 귀여운 효과 문구 (블럭 안 가림)
+  if(match.net==="online" && !it.self){ // 🌐 공격 아이템 → 진짜 상대에게 전송!
+    netSend({t:"relay",k:"item",id:it.id});
+    oppFx("zapFx"); hitFloat($("oppPanel"),it.icon,"#fff");
+    return;
+  }
+  switch(it.id){ // ※ 어떤 아이템도 게임을 직접 끝내지 않음 - 보드만 도와주거나 방해할 뿐
+    case "bomb": for(let k=0;k<2;k++){me.grid.pop();me.grid.unshift(Array(CW).fill(null));}
+      for(let i=0;i<24;i++)parts.push({x:rand(0,CW*CELL),y:CH*CELL-rand(0,2*CELL),vx:rand(-3,3),vy:rand(-5,-1),
+        life:1,size:rand(3,7),color:["#ffb36b","#ff8fb1","#fff"][ri(0,2)],type:"dot"});
+      shakeBoard(); flashMe("good"); break;
+    case "clear": for(let k=0;k<4;k++){me.grid.pop();me.grid.unshift(Array(CW).fill(null));}
+      for(let i=0;i<26;i++)parts.push({x:rand(0,CW*CELL),y:CH*CELL-rand(0,4*CELL),vx:rand(-2,2),vy:rand(-4,-1),
+        life:1.1,size:rand(4,9),color:"#6fe8cf",type:"star",spin:rand(-0.2,0.2)});
+      shakeBoard(); flashMe("good"); break;
+    case "shield": me.shield+=2; flashMe("good"); break;
+    case "slow": me.slowUntil=performance.now()+10000; flashMe("good"); break;
+    case "candy": addStars(3); flashMe("good"); break;
+    case "attack": multiAttack(2); break;
+    case "tornado": if(cpu){ // 상대 바닥 3줄 뒤섞기 (구멍 생성)
+        for(let y=CH-3;y<CH;y++){ const cells=cpu.grid[y].filter(v=>v);
+          if(cells.length&&cells.length<CW){ const row=Array(CW).fill(null); const pos=[...Array(CW).keys()].sort(()=>Math.random()-.5);
+            cells.forEach((c,i)=>row[pos[i]]=c); cpu.grid[y]=row; } }
+        oppFx("spinFx"); hitFloat($("oppPanel"),"🌪️","#9ef07f"); } break;
+    case "zap": if(cpu){ cpu.fastUntil=performance.now()+8000;
+        oppFx("zapFx"); hitFloat($("oppPanel"),"⚡×2.5","#ffe066"); } break;
+    case "fog": if(match.brain){ match.brain.fogUntil=performance.now()+6000;
+        $("oppFog").classList.add("on"); setTimeout(()=>$("oppFog").classList.remove("on"),6000);
+        hitFloat($("oppPanel"),"🌫️ ???","#cfd6e6"); } break;
+    case "blind": if(cpu){ cpu.blindUntil=performance.now()+5000; // 🙈 5초간 상대 블럭 안 보임
+        oppFx("flash-red"); hitFloat($("oppPanel"),"🙈 5s","#8d7bb8"); } break;
+    case "mirror": if(cpu){ cpu.mirrorUntil=performance.now()+5000; // 🔀 5초간 상대 좌우 반전
+        oppFx("spinFx"); hitFloat($("oppPanel"),"🔀 ↔","#ff9de2"); } break;
+    case "holes": if(cpu){ // 🧀 상대 모든 줄에 랜덤 구멍 1개씩
+        for(let y=0;y<CH;y++){ const idx=cpu.grid[y].map((v,i)=>v?i:-1).filter(i=>i>=0);
+          if(idx.length) cpu.grid[y][idx[ri(0,idx.length-1)]]=null; }
+        oppFx("zapFx"); hitFloat($("oppPanel"),"🧀!!","#ffe8a3"); } break;
+  }
+}
+function flashMe(kind){ const w=$("boardWrap"), cl=kind==="good"?"flash-good":"flash-red";
+  w.classList.remove(cl); void w.offsetWidth; w.classList.add(cl); }
+$("atkBtn").addEventListener("click",()=>{
+  if(!match||!match.running)return;
+  if(atkStock<=0){ toast(T("tAtkStock")); return; }
+  multiAttack(atkStock); toast(T("tAtkFire",{n:atkStock})); atkStock=0; updateAtk();
+});
+
+/* ---- 게임 종료: 승패는 오직 "화면이 꼭대기까지 차오름(탑아웃)"으로만 결정. 5초 카운트 후 재대결/나가기 ---- */
+function endMatch(win){
+  if(!match||match.ended)return; match.ended=true; match.running=false;
+  $("dangerVeil").style.display="none";
+  playSfx(win&&match.players!=="solo"?"sfx_win":"sfx_lose"); // 🔊 승리/패배
+  if(match.net==="online" && !win && !match._overSent){ match._overSent=true; netSend({t:"relay",k:"over"}); }
+  questProgress("play",1); // 📜 게임 하기
+  if(win&&match.players!=="solo") questProgress("win",1); // 📜 승리
+  let extra="";
+  if(match.net==="online"&&match.opp){ // 🏅 랭크 RP + 🔥 연승 + ⚔️ 상대전적 + 🏆 주간랭킹
+    const nm=match.opp.name, rv=meta.rivals[nm]||{w:0,l:0};
+    if(win){ meta.rp+=20; meta.streak++; meta.best=Math.max(meta.best,meta.streak); rv.w++;
+      netSend({t:"win"}); // 주간 랭킹 보고
+      const locked=BACKGROUNDS.filter(b=>!meta.collected.includes(b.id)); // 🖼 승리 보너스: 랜덤 수집
+      if(locked.length) collectBg(locked[ri(0,locked.length-1)].id);
+      extra=" · +20"+T("rpLabel");
+    } else { meta.rp=Math.max(0,meta.rp-10); meta.streak=0; rv.l++; extra=" · -10"+T("rpLabel"); }
+    meta.rivals[nm]=rv; saveMeta();
+    extra+=" · "+T("rival")+" "+rv.w+T("winsUnit")+" "+rv.l+T("lossUnit");
+    const sb=streakBadge(meta.streak); if(sb)extra+=" · "+sb+meta.streak;
+  }
+  match._extra=extra;
+  if(match.players==="solo"){ $("overTitle").textContent=T("gameover");
+    $("overSub").textContent=T("soloSub",{s:match.me.score,l:match.me.lines,g:match.me.stage});
+  } else if(win){ $("overTitle").textContent=T("win");
+    $("overSub").textContent=T("winSub",{o:$("oppName").textContent})+(match._extra||"");
+    record(true);
+  } else { $("overTitle").textContent=T("lose");
+    $("overSub").textContent=T("loseSub")+(match._extra||"");
+    record(false);
+  }
+  $("overOv").classList.add("on");
+  let n=5; $("overCount").textContent=n;
+  clearInterval(gameOverTimer);
+  gameOverTimer=setInterval(()=>{ n--;
+    if(n<=0){ $("overCount").textContent="🔔"; clearInterval(gameOverTimer); }
+    else $("overCount").textContent=n;
+  },1000);
+}
+function record(win){ // 승수 누적 (향후 온라인 전적표시에 사용)
+  const r=store.get("record",{w:0,l:0}); if(win)r.w++; else r.l++; store.set("record",r);
+}
+$("rematchBtn").addEventListener("click",()=>{
+  if(match&&match.net==="online"){ // 🌐 양쪽 모두 수락해야 재대결
+    online.myReady=true; netSend({t:"relay",k:"ready"});
+    $("overCount").textContent="⏳"; toast(T("tRematchWait"));
+    tryOnlineRematch(); return;
+  }
+  clearInterval(gameOverTimer); $("overOv").classList.remove("on");
+  newMatch({players:match.players,mode:match.mode,net:match.net}); });
+$("leaveBtn").addEventListener("click",()=>{ clearInterval(gameOverTimer); $("overOv").classList.remove("on"); goMenu(); });
+
+/* ============================================================
+   8. 조작 - 터치 버튼 & 키보드
+   요구사항:
+   ◀▶ : 한 번 = 1칸, 꾹(설정 시간) = 벽까지 연속 이동
+   ▼  : 한 번 = 정확히 1칸 (누르는 만큼 하강), 꾹 = 3배속 유지
+   ⏪⏬⏩(Z/X/C) : 한 번 = 설정한 칸 수(기본 3칸)를 설정한 속도로 빠르게 이동
+   ▲  : 블럭 회전 / 왼쪽 ↺↻ = 좌/우 회전, ⤓ = 즉시 낙하(블라스터!)
+   ============================================================ */
+function bindHold(btn, onTap, onHoldStart, onHoldEnd, dasMs){
+  let holdT=null, holding=false;
+  const down=e=>{ e.preventDefault(); btn.classList.add("pressed"); onTap&&onTap();
+    holdT=setTimeout(()=>{ holding=true; onHoldStart&&onHoldStart(); }, dasMs());
+  };
+  const up=e=>{ e&&e.preventDefault(); btn.classList.remove("pressed"); clearTimeout(holdT);
+    if(holding){ holding=false; onHoldEnd&&onHoldEnd(); } };
+  btn.addEventListener("pointerdown",down);
+  btn.addEventListener("pointerup",up);
+  btn.addEventListener("pointercancel",up);
+  btn.addEventListener("pointerleave",up);
+}
+let repeatDir=0, repeatAcc=0;
+function bindControls(){
+  const das=()=>settings.das;
+  bindHold($("btnLeft"), ()=>match&&match.running&&match.me.move(-1), ()=>repeatDir=-1, ()=>repeatDir=0, das);
+  bindHold($("btnRight"),()=>match&&match.running&&match.me.move(1),  ()=>repeatDir=1,  ()=>repeatDir=0, das);
+  bindHold($("btnDown"),
+    ()=>{ if(match&&match.running){ match.me.step(); match.me.dropAcc=0; } }, // 한 번 = 정확히 1칸
+    ()=>softHeld=true, ()=>softHeld=false, ()=>120);                          // 꾹 = 3배속 유지
+  const qArgs=()=>[settings.quickCells,settings.quickSpeed];
+  bindHold($("btnQuickL"),()=>{ if(match&&match.running)match.me.quickMove(-1,0,...qArgs()); },null,null,()=>9999);
+  bindHold($("btnQuickR"),()=>{ if(match&&match.running)match.me.quickMove( 1,0,...qArgs()); },null,null,()=>9999);
+  bindHold($("btnQuickD"),()=>{ if(match&&match.running)match.me.quickMove( 0,1,...qArgs()); },null,null,()=>9999);
+  bindHold($("btnUp"),  ()=>match&&match.running&&match.me.rotate(1), null,null,()=>9999);
+  bindHold($("btnRotL"),()=>match&&match.running&&match.me.rotate(-1),null,null,()=>9999);
+  bindHold($("btnRotR"),()=>match&&match.running&&match.me.rotate(1), null,null,()=>9999);
+  bindHold($("btnHard"),()=>match&&match.running&&match.me.hardDrop(),null,null,()=>9999);
+}
+bindControls();
+/* ============================================================
+   8-B. 터치 제스처 (휴대폰/태블릿): 게임 화면 아무 곳이나
+   · 좌/우로 밀기 = 한 칸씩 이동 (민감도 px 설정 가능)
+   · 아래로 밀기 = 한 번에 즉시 낙하 (블라스터!)
+   · 탭(터치) = 회전
+   버튼/독/패널 위에서는 작동하지 않아 기존 조작과 충돌 없음
+   ============================================================ */
+(function(){
+  const area=document.querySelector(".game-area");
+  let g=null;
+  const skip=t=>t.closest(".dock")||t.closest("#oppPanel")||t.closest("#sidePanel")||t.closest("button")||t.closest("#emotePop")||t.closest(".ctl-cluster");
+  area.addEventListener("pointerdown",e=>{
+    if(editing||e.pointerType==="mouse")return;      // 터치/펜 전용 (PC는 키보드·마우스버튼 사용)
+    if(skip(e.target))return;
+    g={x0:e.clientX,y0:e.clientY,lastX:e.clientX,acc:0,t:performance.now(),moved:0,done:false,id:e.pointerId};
+  });
+  area.addEventListener("pointermove",e=>{
+    if(!g||g.done||e.pointerId!==g.id||!match||!match.running)return;
+    const dx=e.clientX-g.x0, dy=e.clientY-g.y0;
+    if(dy>70 && dy>Math.abs(dx)*1.4){ match.me.hardDrop(); g.done=true; return; } // 아래로 밀기 = 즉시 낙하
+    g.acc += e.clientX-g.lastX; g.lastX=e.clientX;
+    const sens=settings.swipeSens;
+    while(Math.abs(g.acc)>=sens){ const d=Math.sign(g.acc); match.me.move(d); g.acc-=d*sens; g.moved++; }
+  });
+  const up=e=>{
+    if(!g||e.pointerId!==g.id){return;}
+    const dist=Math.hypot(e.clientX-g.x0,e.clientY-g.y0), dt=performance.now()-g.t;
+    if(!g.done && g.moved===0 && dist<12 && dt<350 && match && match.running) match.me.rotate(1); // 탭 = 회전
+    g=null;
+  };
+  area.addEventListener("pointerup",up);
+  area.addEventListener("pointercancel",()=>g=null);
+})();
+/* PC 키보드: 설정한 키(settings.keymap, e.code 기준)로 동작. 기본 = ↺:A / ↻:D / ⤓:Space */
+function keyLabel(code){ // 화면 버튼 안에 표시할 세련된 짧은 라벨
+  if(!code)return"";
+  if(code.startsWith("Key"))return code.slice(3);
+  if(code.startsWith("Digit"))return code.slice(5);
+  const map={ArrowLeft:"←",ArrowRight:"→",ArrowUp:"↑",ArrowDown:"↓",Space:"SPACE",ShiftLeft:"L-SHIFT",ShiftRight:"R-SHIFT",ControlLeft:"CTRL",Enter:"ENTER",Comma:",",Period:".",Slash:"/",Semicolon:";"};
+  return map[code]||code.replace(/(Left|Right)$/,"").toUpperCase().slice(0,6);
+}
+function updateKeyLabels(){
+  document.querySelectorAll(".kbd[data-k]").forEach(sp=>{ sp.textContent=keyLabel(settings.keymap[sp.dataset.k]); });
+}
+updateKeyLabels();
+const KEY_ACTIONS={
+  left:()=>match.me.move(-1),
+  right:()=>match.me.move(1),
+  down:()=>{ match.me.step(); match.me.dropAcc=0; }, // ▼ 한 번 = 정확히 1칸 (누르는 만큼 하강, 꾹 누르면 키 반복으로 연속 하강)
+  up:()=>match.me.rotate(1),
+  rotL:()=>match.me.rotate(-1),
+  rotR:()=>match.me.rotate(1),
+  hard:()=>match.me.hardDrop(),
+  quickL:()=>match.me.quickMove(-1,0,settings.quickCells,settings.quickSpeed), // Z: 왼쪽 N칸 빠르게
+  quickR:()=>match.me.quickMove( 1,0,settings.quickCells,settings.quickSpeed), // C: 오른쪽 N칸 빠르게
+  quickD:()=>match.me.quickMove( 0,1,settings.quickCells,settings.quickSpeed), // X: 아래 N칸 빠르게
+  draw:()=>drawGacha(),
+  use:()=>useFirstItem(),
+};
+document.addEventListener("keydown",e=>{
+  if(keyCapture){ keyCapture(e); e.preventDefault(); return; } // 설정에서 키 바꾸는 중
+  if(e.code==="Escape"){ togglePause(); return; }
+  if(!match||!match.running)return;
+  const km=settings.keymap;
+  const act=Object.keys(km).find(k=>km[k]===e.code);
+  if(!act)return;
+  e.preventDefault();
+  if(e.repeat && act!=="left" && act!=="right" && act!=="down")return; // 좌우·아래는 키 반복=연속이동
+  KEY_ACTIONS[act]();
+});
+let keyCapture=null;
+
+/* ============================================================
+   9. 버튼 배치 편집 (드래그 이동 + 크기 슬라이더/두 손가락 확대)
+   ============================================================ */
+const DEFAULT_LAYOUT={ L:{x:0.03,y:0.80,size:58}, R:{x:0.60,y:0.80,size:58} };
+let layout = settings.layout || JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+function applyLayout(){
+  const W=innerWidth,H=innerHeight;
+  placeCluster($("clusterL"), layout.L, "L", W, H);
+  placeCluster($("clusterR"), layout.R, "R", W, H);
+}
+function placeCluster(el, cfg, side, W, H){
+  const s=cfg.size, gap=s*0.18, qs=s*0.8;   // qs: ⚡퀵무브 버튼(조금 작게)
+  let wPx,hPx;
+  if(side==="L"){ wPx = s + (qs+gap)*2; hPx = s*2 + qs + gap*2; } // 가운데 줄(⏪⤓⏩)이 가장 넓음
+  else          { wPx = s*3 + gap*2;    hPx = s*2 + gap; }
+  let top = cfg.y*H; if(top+hPx > H-6) top = Math.max(6, H-6-hPx); // 화면 밖으로 나가지 않게
+  let left = cfg.x*W; if(left+wPx > W-6) left = Math.max(6, W-6-wPx);
+  el.style.left=left+"px"; el.style.top=top+"px";
+  el.style.width=wPx+"px"; el.style.height=hPx+"px";
+  if(side==="L"){ // ↺ ↻ 위 / ⏪ ⤓ ⏩ 가운데 / ⏬ 아래
+    const cx=wPx/2, y2=s+gap, y2q=y2+(s-qs)/2, y3=y2+s+gap;
+    setBtn($("btnRotL"), cx-(s+gap/2), 0, s);  setBtn($("btnRotR"), cx+gap/2, 0, s);
+    setBtn($("btnQuickL"), cx-s/2-gap-qs, y2q, qs);
+    setBtn($("btnHard"),   cx-s/2,        y2,  s);
+    setBtn($("btnQuickR"), cx+s/2+gap,    y2q, qs);
+    setBtn($("btnQuickD"), cx-qs/2,       y3,  qs);
+  } else { // ◀ ▼ ▶ 한 줄, ▲는 ▼ 바로 위
+    setBtn($("btnUp"),  s+gap,0,s);
+    setBtn($("btnLeft"),0,s+gap,s); setBtn($("btnDown"),s+gap,s+gap,s); setBtn($("btnRight"),(s+gap)*2,s+gap,s);
+  }
+}
+function setBtn(b,x,y,s){ b.style.left=x+"px"; b.style.top=y+"px"; b.style.width=s+"px"; b.style.height=s+"px"; b.style.fontSize=(s*0.46)+"px"; }
+applyLayout();
+addEventListener("resize",()=>{applyLayout();sizeBoard();});
+
+let editing=false;
+function setEditing(on){
+  editing=on; document.body.classList.toggle("editing",on);
+  if(on){ $("sizeL").value=layout.L.size; $("sizeR").value=layout.R.size;
+    if(match)match.running=false;
+    if($("gameScreen").classList.contains("on")===false){ showScreen("gameScreen"); editPreview=true; }
+  } else {
+    settings.layout=layout; store.set("layout",layout);
+    if(editPreview){ editPreview=false; goMenu(); }
+    else if(match&&!match.ended){ match.running=true; lastT=performance.now(); }
+    toast(T("tLayout"));
+  }
+}
+let editPreview=false;
+["L","R"].forEach(side=>{
+  const el=$("cluster"+side); let drag=null;
+  el.addEventListener("pointerdown",e=>{
+    if(!editing)return; e.preventDefault();
+    drag={sx:e.clientX,sy:e.clientY,ox:layout[side].x,oy:layout[side].y};
+    el.setPointerCapture&&el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener("pointermove",e=>{
+    if(!editing||!drag)return;
+    layout[side].x=clamp(drag.ox+(e.clientX-drag.sx)/innerWidth,0,0.85);
+    layout[side].y=clamp(drag.oy+(e.clientY-drag.sy)/innerHeight,0.1,0.9);
+    applyLayout();
+  });
+  el.addEventListener("pointerup",()=>drag=null);
+  el.addEventListener("pointercancel",()=>drag=null);
+});
+$("sizeL").addEventListener("input",e=>{layout.L.size=+e.target.value;applyLayout();});
+$("sizeR").addEventListener("input",e=>{layout.R.size=+e.target.value;applyLayout();});
+$("resetLayoutBtn").addEventListener("click",()=>{layout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));applyLayout();
+  $("sizeL").value=58;$("sizeR").value=58;});
+$("doneEditBtn").addEventListener("click",()=>setEditing(false));
+
+/* ============================================================
+   10. 이모티콘 (HUD 😀 버튼 → 팝오버, 다른 UI와 겹치지 않음)
+   ============================================================ */
+$("sndBtn").textContent = soundOn ? "🔊" : "🔇";
+$("sndBtn").addEventListener("click",()=>{ soundOn=!soundOn; store.set("soundOn",soundOn);
+  $("sndBtn").textContent=soundOn?"🔊":"🔇"; if(soundOn)playSfx("sfx_line1"); });
+$("emoteToggle").addEventListener("click",()=>$("emotePop").classList.toggle("on"));
+document.querySelectorAll(".emote-btn").forEach(b=>b.addEventListener("click",()=>{
+  $("emotePop").classList.remove("on");
+  if(match&&match.net==="online") netSend({t:"relay",k:"emote",e:b.dataset.e}); // 🌐
+  const el=$("myEmote"); el.textContent=b.dataset.e; el.style.display="block";
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display="none",1800);
+}));
+function showOppEmote(e){ const el=$("oppEmote"); el.textContent=e; el.style.display="block";
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display="none",1800); }
+
+/* ============================================================
+   10-B. 드래그 가능한 독: 갓차 / 보유 아이템 / 공격
+   기본 위치는 서로(그리고 다른 UI와) 절대 겹치지 않게 배치, 손잡이(⠿)를 잡고 자유 이동
+   ============================================================ */
+const DEFAULT_DOCKS={ gacha:{x:0.02,y:0.36}, inv:{x:0.02,y:0.60}, atk:{x:0.86,y:0.42} };
+let docks = settings.docks || JSON.parse(JSON.stringify(DEFAULT_DOCKS));
+const DOCK_ELS={ gacha:"gachaDock", inv:"invDock", atk:"attackDock" };
+function applyDocks(){
+  for(const k in DOCK_ELS){ const el=$(DOCK_ELS[k]);
+    el.style.left=clamp(docks[k].x,0,0.9)*innerWidth+"px";
+    el.style.top=clamp(docks[k].y,0.08,0.88)*innerHeight+"px"; }
+}
+function makeDockDraggable(key){
+  const el=$(DOCK_ELS[key]); const handle=el.querySelector(".dock-handle");
+  let drag=null;
+  handle.addEventListener("pointerdown",e=>{ e.preventDefault();
+    drag={sx:e.clientX,sy:e.clientY,ox:docks[key].x,oy:docks[key].y};
+    el.classList.add("dragging"); handle.setPointerCapture&&handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener("pointermove",e=>{ if(!drag)return;
+    docks[key].x=clamp(drag.ox+(e.clientX-drag.sx)/innerWidth,0,0.9);
+    docks[key].y=clamp(drag.oy+(e.clientY-drag.sy)/innerHeight,0.08,0.88);
+    applyDocks();
+  });
+  const end=()=>{ if(!drag)return; drag=null; el.classList.remove("dragging");
+    settings.docks=docks; store.set("docks",docks); };
+  handle.addEventListener("pointerup",end);
+  handle.addEventListener("pointercancel",end);
+}
+["gacha","inv","atk"].forEach(makeDockDraggable);
+addEventListener("resize",applyDocks);
+
+/* ============================================================
+   11. 화면 이동 / 메뉴 / 설정
+   ============================================================ */
+function showScreen(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on")); $(id).classList.add("on"); }
+function goMenu(){
+  if(online.inRoom){ netSend({t:"leave"}); online.inRoom=false; online.waiting=false; }
+  match=null; $("emotePop").classList.remove("on"); showScreen("menuScreen"); }
+const menuSel={players:"solo",net:"cpu",mode:"classic"};
+function bindSeg(id,key){
+  $(id).querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    if(b.classList.contains("disabled")){ toast(T("tOnline")); return; }
+    $(id).querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); menuSel[key]=b.dataset.v; refreshMenu();
+  }));
+}
+bindSeg("segPlayers","players"); bindSeg("segNet","net"); bindSeg("segMode","mode");
+/* 게임 스타일 토글: 🧱 테트리스(원본 유지, 히든) ↔ 🍬 슈가블럭스(기본) */
+$("styleRow").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+  $("styleRow").querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+  b.classList.add("sel"); settings.gameStyle=b.dataset.st; store.set("gameStyle",settings.gameStyle);
+  applyLang(); refreshMenu();
+}));
+if(settings.gameStyle==="buster"){ document.querySelector('#styleRow button[data-st="tetris"]').classList.remove("sel");
+  document.querySelector('#styleRow button[data-st="buster"]').classList.add("sel"); }
+/* 🚀 출시 빌드: "TETRIS" 입력 잠금 */
+(function(){
+  if(!RELEASE_BUILD || tetrisUnlocked) return;
+  const row=$("styleRow"), tBtn=row.querySelector('[data-st="tetris"]');
+  tBtn.style.display="none"; // 해금 전엔 숨김
+  const inp=document.createElement("input");
+  inp.type="text"; inp.id="unlockInput"; inp.maxLength=6; inp.autocomplete="off";
+  inp.placeholder=T("unlockPh");
+  inp.style.cssText="width:104px;background:#241c44;border:2px solid var(--line);border-radius:12px;color:var(--ink);padding:8px 10px;font-family:inherit;text-align:center;font-size:13px;letter-spacing:2px";
+  const bBtn=row.querySelector('[data-st="buster"]');
+  inp.addEventListener("input",()=>{
+    const v=inp.value.trim();
+    if(v.toUpperCase()==="TETRIS"){ // 🧱 이 세션은 TETRIS 모드로만 실행
+      tetrisUnlocked=true; // 저장 안 함 → 다음 실행엔 다시 슈가블럭스
+      inp.remove();
+      bBtn.style.display="none"; bBtn.classList.remove("sel"); // 세션 동안 테트리스 전용
+      tBtn.style.display=""; tBtn.classList.add("sel");
+      settings.gameStyle="tetris";
+      applyLang(); refreshMenu();
+      playSfx("sfx_stage"); toast(T("tUnlocked"),2400);
+    } else if(v.toLowerCase()==="zsdvvv"){ // 🧩 블럭 공방 (설정 메뉴 안에서) 활성화
+      editorUnlocked=true; inp.value="";
+      playSfx("sfx_gacha"); toast(T("beUnlocked"),2400);
+    }
+  });
+  row.appendChild(inp);
+})();
+/* 언어 전환: 초기 화면에서 선택 → 모든 문구/폰트가 바뀜 */
+$("langRow").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+  $("langRow").querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+  b.classList.add("sel"); settings.lang=b.dataset.l; store.set("lang",settings.lang);
+  applyLang(); refreshMenu(); updateKeyLabels();
+}));
+function refreshMenu(){
+  let d = menuSel.mode==="classic"?T("descClassic"):menuSel.mode==="fight"?T("descFight"):T("descFightItem");
+  if(menuSel.players==="solo"&&menuSel.mode!=="classic") d+=T("soloNote");
+  if(menuSel.players==="vsN") d+=T("multiNote");
+  if(menuSel.net==="online") d+=T("descOnline");
+  if(settings.gameStyle==="buster"){ // 💥 배포용 명칭으로 치환 (테트리스 모드는 원문 유지)
+    d=d.replace(/테트리스|Tetris|Tétris|俄罗斯方块/g,T("busterWord"))+T("descBuster");
+  }
+  $("modeDesc").textContent=d;
+  refreshProfile(); renderQuests();
+  /* 도입 메뉴: 간략 도감(칩+스크롤) - 아이템 모드 선택 시. 상세는 📖 버튼 팝업으로 */
+  const ig=$("itemGuide"); const isItem=menuSel.mode==="fightItem";
+  ig.classList.toggle("on",isItem); $("itemDetailBtn").classList.toggle("on",isItem);
+  if(isItem){
+    ig.innerHTML=ITEMS.map(it=>`<span class="ig-chip"><span class="ig-i">${it.icon}</span>${itemName(it)}</span>`).join("");
+  }
+}
+/* 아이템 상세 설명 팝업 */
+$("itemDetailBtn").addEventListener("click",()=>{
+  $("idtList").innerHTML=ITEMS.map(it=>`<div class="idt-row"><span class="idt-i">${it.icon}</span>
+    <span><span class="idt-n">${itemName(it)}</span> <span class="rarity r${it.rar}" style="font-size:10px">${T("rar"+it.rar)}</span><br>
+    <span class="idt-d">${itemDesc(it)} · <b style="color:var(--candy-sky)">"${T("item_"+it.id+"_f")}"</b></span></span></div>`).join("");
+  $("itemDetailOv").classList.add("on");
+});
+$("idtClose").addEventListener("click",()=>$("itemDetailOv").classList.remove("on"));
+$("collectionBtn").addEventListener("click",openCollection);
+$("colClose").addEventListener("click",()=>$("collectionOv").classList.remove("on"));
+applyLang();
+document.querySelector('#langRow button[data-l="'+settings.lang+'"]').classList.add("sel");
+if(settings.lang!=="ko")document.querySelector('#langRow button[data-l="ko"]').classList.remove("sel");
+refreshMenu();
+$("playBtn").addEventListener("click",()=>{
+  if(menuSel.net==="online"){ openLobby(); return; } // 🌐 온라인은 로비에서 시작
+  let players=menuSel.players, mode=menuSel.mode;
+  if(players==="solo"&&mode!=="classic")players="vs1"; // 파이트는 상대 필요
+  showScreen("gameScreen"); sizeBoard(); applyLayout();
+  newMatch({players,mode,net:menuSel.net});
+});
+/* 일시정지 */
+function togglePause(){
+  if(!match||match.ended)return;
+  const on=$("pauseOv").classList.toggle("on");
+  match.running=!on; if(!on)lastT=performance.now();
+}
+$("pauseBtn").addEventListener("click",togglePause);
+$("resumeBtn").addEventListener("click",togglePause);
+$("quitBtn").addEventListener("click",()=>{$("pauseOv").classList.remove("on");goMenu();});
+/* 설정 */
+function buildKeyRows(){
+  const order=["rotL","rotR","hard","left","right","down","up","quickL","quickR","quickD","draw","use"];
+  const label={left:"kLeft",right:"kRight",down:"kDown",up:"kUp",rotL:"kRotL",rotR:"kRotR",hard:"kHard",
+    quickL:"kQuickL",quickR:"kQuickR",quickD:"kQuickD",draw:"kDraw",use:"kUse"};
+  $("keyRows").innerHTML="";
+  order.forEach(k=>{
+    const row=document.createElement("div"); row.className="key-row";
+    const name=document.createElement("span"); name.textContent=T(label[k]);
+    const btn=document.createElement("button"); btn.className="key-btn"; btn.textContent=keyLabel(settings.keymap[k]);
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".key-btn").forEach(b=>b.classList.remove("listen"));
+      btn.classList.add("listen"); btn.textContent=T("pressKey");
+      keyCapture=(e)=>{ settings.keymap[k]=e.code; store.set("keymap",settings.keymap);
+        keyCapture=null; btn.classList.remove("listen"); btn.textContent=keyLabel(e.code); updateKeyLabels(); };
+    });
+    row.appendChild(name); row.appendChild(btn); $("keyRows").appendChild(row);
+  });
+}
+function openSettings(){
+  $("nameInput").value=settings.name; $("oppPosSel").value=settings.oppPos;
+  $("dasRange").value=settings.das; $("dasVal").textContent=T("dasHint",{n:settings.das});
+  $("swipeRange").value=settings.swipeSens; $("swipeVal").textContent=T("swipeHint",{n:settings.swipeSens});
+  $("quickCellsRange").value=settings.quickCells; $("quickCellsVal").textContent=T("quickCellsHint",{n:settings.quickCells});
+  $("quickSpeedRange").value=settings.quickSpeed; $("quickSpeedVal").textContent=T("quickSpeedHint",{n:settings.quickSpeed});
+  buildKeyRows();
+  $("beRow").style.display = editorUnlocked ? "flex" : "none"; // 🧩 zsdvvv 입력 시에만 보임
+  $("settingsOv").classList.add("on"); if(match)match.running=false;
+}
+$("dasRange").addEventListener("input",e=>$("dasVal").textContent=T("dasHint",{n:e.target.value}));
+$("swipeRange").addEventListener("input",e=>$("swipeVal").textContent=T("swipeHint",{n:e.target.value}));
+$("quickCellsRange").addEventListener("input",e=>$("quickCellsVal").textContent=T("quickCellsHint",{n:e.target.value}));
+$("quickSpeedRange").addEventListener("input",e=>$("quickSpeedVal").textContent=T("quickSpeedHint",{n:e.target.value}));
+$("menuSettingsBtn").addEventListener("click",openSettings);
+$("closeSettingsBtn").addEventListener("click",()=>{
+  keyCapture=null;
+  const nm=$("nameInput").value.trim(); if(nm)settings.name=nm;
+  settings.oppPos=$("oppPosSel").value; settings.das=+$("dasRange").value;
+  settings.swipeSens=+$("swipeRange").value; store.set("swipeSens",settings.swipeSens);
+  settings.quickCells=+$("quickCellsRange").value; store.set("quickCells",settings.quickCells);
+  settings.quickSpeed=+$("quickSpeedRange").value; store.set("quickSpeed",settings.quickSpeed);
+  store.set("name",settings.name); store.set("oppPos",settings.oppPos); store.set("das",settings.das);
+  $("settingsOv").classList.remove("on"); refreshMenu();
+  if(match&&!match.ended){ $("oppPanel").className=settings.oppPos;
+    $("sidePanel").className = settings.oppPos==="right"?"left":"right";
+    match.running=true; lastT=performance.now(); }
+});
+$("layoutFromSettings").addEventListener("click",()=>{$("settingsOv").classList.remove("on");setEditing(true);});
+$("menuLayoutBtn").addEventListener("click",()=>setEditing(true));
+
+/* ============================================================
+   11-B. 네트워크 대전 (1단계: 1:1 온라인)
+   · 함께 제공되는 server.js 를 실행하면 접속 가능
+   · 방 목록에 방 이름 + 방장 이름 + 누적 승수(🏆)가 표시됨
+   ============================================================ */
+let ws=null;
+const online={connected:false,inRoom:false,waiting:false,cfg:null,myReady:false,oppReady:false};
+function netSend(o){ try{ if(ws&&ws.readyState===1)ws.send(JSON.stringify(o)); }catch(e){} }
+function openLobby(){
+  const auto = location.host ? (location.protocol==="https:"?"wss://":"ws://")+location.host : "ws://localhost:8765";
+  $("serverInput").value=store.get("serverUrl",auto);
+  $("lobbyStatus").textContent=online.connected?T("connected"):"";
+  $("lobbyMain").style.display=online.connected?"flex":"none";
+  $("lobbyOv").classList.add("on"); if(online.connected)netSend({t:"list"}); }
+$("lobbyCloseBtn").addEventListener("click",()=>$("lobbyOv").classList.remove("on"));
+$("connectBtn").addEventListener("click",()=>{
+  const url=$("serverInput").value.trim(); if(!url)return;
+  store.set("serverUrl",url);
+  try{ if(ws)ws.close(); }catch(e){}
+  try{ ws=new WebSocket(url); }catch(e){ $("lobbyStatus").textContent=T("connFail"); return; }
+  $("lobbyStatus").textContent="...";
+  ws.onopen=()=>{ online.connected=true;
+    netSend({t:"hello",name:settings.name,wins:store.get("record",{w:0,l:0}).w,rp:meta.rp,streak:meta.streak});
+    $("lobbyStatus").textContent=T("connected"); $("lobbyMain").style.display="flex"; netSend({t:"list"}); };
+  ws.onclose=()=>{ online.connected=false; online.inRoom=false; };
+  ws.onerror=()=>{ $("lobbyStatus").textContent=T("connFail"); };
+  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch(e){return;} netHandle(m); };
+});
+$("refreshBtn").addEventListener("click",()=>netSend({t:"list"}));
+$("boardBtn").addEventListener("click",()=>netSend({t:"board"}));
+function renderWeekBoard(list){
+  const box=$("roomList");
+  box.innerHTML=`<div class="menu-label">🏆 ${T("board")}</div>`+
+    (list.length? list.map((r,i)=>`<div class="ov-sub" style="text-align:left">${["🥇","🥈","🥉"][i]||(i+1)+"."} ${tierOf(r.rp).i}${r.name} — 🏆${r.wins}${T("winsUnit")}</div>`).join("") : `<div class="ov-sub">-</div>`);
+}
+$("createRoomBtn").addEventListener("click",()=>{
+  if(!online.connected)return;
+  const nm=$("roomNameInput").value.trim()||settings.name;
+  netSend({t:"create",name:nm,mode:menuSel.mode,style:settings.gameStyle}); // 방장의 모드+스타일로 게임
+  online.waiting=true; $("lobbyStatus").textContent=T("waitingOpp");
+});
+function renderRooms(list){
+  const box=$("roomList");
+  if(!list.length){ box.innerHTML=`<div class="ov-sub">${T("noRooms")}</div>`; return; }
+  box.innerHTML="";
+  list.forEach(r=>{
+    const b=document.createElement("button"); b.className="ov-btn";
+    b.style.cssText="text-align:left;font-size:13px;padding:10px";
+    const modeL = r.mode==="classic"?T("mdClassic"):r.mode==="fight"?T("mdFight"):T("mdFightItem");
+    b.textContent=`${r.style==="buster"?"💥":"🚪"} ${r.name} · ${tierOf(r.rp).i}${r.host} · 🏆${r.wins}${T("winsUnit")} · ${modeL}`;
+    b.addEventListener("click",()=>{ netSend({t:"join",id:r.id}); });
+    box.appendChild(b);
+  });
+}
+function netHandle(m){
+  switch(m.t){
+    case "rooms": renderRooms(m.list||[]); break;
+    case "board": renderWeekBoard(m.list||[]); break;
+    case "created": online.inRoom=true; online.waiting=true; $("lobbyStatus").textContent=T("waitingOpp"); break;
+    case "start": online.inRoom=true; online.waiting=false;
+      online.cfg={players:"vs1",mode:m.mode,style:m.style||"tetris",net:"online",opp:m.opp};
+      startOnlineGame(); break;
+    case "relay": netRelay(m); break;
+    case "oppLeft":
+      toast(T("oppLeftMsg"));
+      if(match&&match.net==="online"&&!match.ended){ endMatch(true); }
+      online.inRoom=false; online.waiting=false;
+      if($("lobbyOv").classList.contains("on")){ $("lobbyStatus").textContent=T("connected"); netSend({t:"list"}); }
+      break;
+    case "err": toast("⚠️ "+(m.msg||"error")); break;
+  }
+}
+function startOnlineGame(){
+  online.myReady=false; online.oppReady=false;
+  $("lobbyOv").classList.remove("on"); $("overOv").classList.remove("on"); clearInterval(gameOverTimer);
+  showScreen("gameScreen"); sizeBoard(); applyLayout();
+  newMatch(online.cfg);
+}
+function makeRemoteOpp(){ // 원격 상대의 화면 미러 (엔진 없이 상태만 표시)
+  return { grid:Array.from({length:CH},()=>Array(CW).fill(null)),
+    cur:null, over:false, lines:0, score:0, blindUntil:0, fogUntil:0, mirrorUntil:0, pendingGarbage:0 };
+}
+function netRelay(m){
+  if(!match||match.net!=="online")return;
+  switch(m.k){
+    case "state": { const o=match.cpu; if(!o)break;
+      o.grid=m.g.map(r=>r.map(n=>n?{c:n,gem:false}:null));
+      o.cur=m.c?{m:m.c.m,x:m.c.x,y:m.c.y,gemCell:null}:null;
+      o.lines=m.l||0; $("oppStatus").textContent=T("lines")+" "+o.lines; break; }
+    case "atk": if(!match.ended)receiveAttack(m.n||1); break;
+    case "item": if(!match.ended)applyEnemyItem(m.id); break;
+    case "emote": showOppEmote(m.e); break;
+    case "over": if(!match.ended)endMatch(true); break; // 상대가 천장에 닿음 → 내 승리
+    case "ready": online.oppReady=true; tryOnlineRematch(); break;
+  }
+}
+/* 온라인: 상대(사람)가 나에게 아이템을 사용했을 때 - 내 화면에 효과 적용 */
+function applyEnemyItem(id){
+  const it=ITEMS.find(i=>i.id===id); if(!it)return;
+  const me=match.me;
+  announceItem($("oppName").textContent, T("toMe"), it);
+  playSfx("sfx_hit"); safeFloat(T("item_"+it.id+"_f"));
+  flashMe("red");
+  switch(id){
+    case "attack": receiveAttack(2); break;
+    case "tornado": for(let y=CH-3;y<CH;y++){ const cells=me.grid[y].filter(v=>v);
+        if(cells.length&&cells.length<CW){ const row=Array(CW).fill(null); const pos=[...Array(CW).keys()].sort(()=>Math.random()-.5);
+          cells.forEach((c,i)=>row[pos[i]]=c); me.grid[y]=row; } } shakeBoard(); break;
+    case "zap": me.fastUntil=performance.now()+8000; break;
+    case "fog": me.fogUntil=performance.now()+6000; break;      // 내 화면이 뿌옇게
+    case "blind": me.blindUntil=performance.now()+5000; break;  // 내 화면이 깜깜
+    case "mirror": me.mirrorUntil=performance.now()+5000; break;// 내 좌우 반전!
+    case "holes": for(let y=0;y<CH;y++){ const idx=me.grid[y].map((v,i)=>v?i:-1).filter(i=>i>=0);
+        if(idx.length) me.grid[y][idx[ri(0,idx.length-1)]]=null; } break;
+  }
+}
+function tryOnlineRematch(){ if(online.myReady&&online.oppReady){ startOnlineGame(); } }
+/* 내 상태를 초당 4회 상대에게 전송 */
+setInterval(()=>{
+  if(!match||match.net!=="online"||match.ended||!ws||ws.readyState!==1)return;
+  const me=match.me;
+  netSend({t:"relay",k:"state",
+    g:me.grid.map(r=>r.map(v=>v?v.c:0)),
+    c:me.cur?{m:me.cur.m,x:me.cur.x,y:me.cur.y}:null,
+    l:me.lines});
+},250);
+
+/* ============================================================
+   12. 메인 루프
+   ============================================================ */
+/* 패배 임박 감지: 블럭이 위에서 4칸 안까지 차오르면 붉은 사이렌 */
+function stackTop(g){ for(let y=0;y<CH;y++){ if(g.grid[y].some(v=>v))return y; } return CH; }
+let dangerTick=0;
+function loop(t){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(t-lastT)/1000); lastT=t;
+  if(match){
+    if(match.running){
+      match.me.update(dt*1000, softHeld);
+      if(repeatDir!==0){ repeatAcc+=dt*1000; if(repeatAcc>40){repeatAcc=0;match.me.move(repeatDir);} }
+      if(match.brain&&!match.cpu.over){ match.cpu.update(dt*1000,false); match.brain.update(dt); }
+      updateIncoming();
+      if(++dangerTick>=12){ dangerTick=0; // 위기 사이렌 (나 + 상대)
+        $("dangerVeil").style.display = (!match.me.over && stackTop(match.me)<=4) ? "block" : "none";
+        if(match.cpu) $("oppPanel").classList.toggle("danger", !match.cpu.over && stackTop(match.cpu)<=4);
+      }
+    }
+    renderBoard(match.me,bctx,CELL,true,bgActive);
+    if(match.style==="buster") renderNextCapsule(match.me); else renderNext(match.me);
+    if(match.cpu){ const oc=oppCv.width/CW; renderBoard(match.cpu,octx,oc,false,false); }
+    drawFX(dt);
+  }
+}
+requestAnimationFrame(t=>{lastT=t;loop(t);});
+$("hudStars").textContent=stars;
+/* 📱 PWA 서비스워커 (http/https로 열었을 때만) */
+try{ if("serviceWorker" in navigator && location.protocol.indexOf("http")===0)
+  navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
+</script>
+</body>
+</html>

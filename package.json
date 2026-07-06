@@ -1,0 +1,7 @@
+{
+  "name": "sugar-blocks",
+  "version": "1.0.0",
+  "description": "Sugar Blocks(슈가블럭스) - 게임 + 온라인 대전 서버 통합 패키지",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "ws": "^8.17.0" }
+}
