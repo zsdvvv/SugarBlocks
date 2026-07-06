@@ -46,7 +46,7 @@ let nextRoomId=1;
 const rooms=new Map(); // id → {id,name,mode,players:[ws],hostInfo}
 function send(ws,obj){ try{ if(ws.readyState===1)ws.send(JSON.stringify(obj)); }catch(e){} }
 function roomList(){ return [...rooms.values()].filter(r=>r.players.length===1)
-  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,host:r.hostInfo.name,wins:r.hostInfo.wins||0,rp:r.hostInfo.rp||0})); }
+  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,vs:r.vs||"vs1",host:r.hostInfo.name,wins:r.hostInfo.wins||0,rp:r.hostInfo.rp||0})); }
 function broadcastRooms(){ const list=roomList();
   wss.clients.forEach(c=>{ if(c.meta&&!c.meta.room)send(c,{t:"rooms",list}); }); }
 function peerOf(ws){ const r=ws.meta&&ws.meta.room; if(!r)return null; return r.players.find(p=>p!==ws)||null; }
@@ -74,6 +74,7 @@ wss.on("connection", ws=>{
         const r={id:nextRoomId++, name:String(m.name||"room").slice(0,14),
           mode:["classic","fight","fightItem"].includes(m.mode)?m.mode:"fight",
           style:m.style==="buster"?"buster":"tetris",
+          vs:m.vs==="vsN"?"vsN":"vs1", // 1:1 / 1:다수 (방 목록에 표시)
           players:[ws], hostInfo:info(ws)};
         rooms.set(r.id,r); ws.meta.room=r;
         send(ws,{t:"created",id:r.id}); broadcastRooms(); break; }
