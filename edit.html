@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛠 슈가 블럭스 EDIT — 개발자 조정 툴</title>
+<style>
+  :root{--bg:#171232;--panel:#241d45;--panel2:#2e2657;--line:#4a3f80;--ink:#f2ecff;--dim:#a99cd6;--yellow:#ffd66b;--pink:#ff8fb1;--mint:#8df0c8;}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Apple SD Gothic Neo,sans-serif;}
+  body{background:var(--bg);color:var(--ink);padding:18px;max-width:860px;margin:0 auto;}
+  h1{font-size:22px;margin-bottom:4px;color:var(--yellow);}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:16px;line-height:1.5;}
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px;}
+  .card h2{font-size:15px;color:var(--mint);margin-bottom:4px;}
+  .card .desc{font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.55;}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+  .row label{flex:1 1 240px;font-size:13px;}
+  .row label small{display:block;color:var(--dim);font-size:11px;margin-top:1px;}
+  .row input[type=number],.row input[type=text],.row select{width:110px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);font-size:13px;}
+  .row input[type=text].wide{width:100%;flex:1;}
+  .bgrow{display:flex;gap:6px;margin-bottom:6px;}
+  .bgrow input{flex:1;padding:6px 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);font-size:12px;}
+  .bgrow input.id{flex:0 0 90px;}
+  .bgrow button{flex:0 0 auto;padding:6px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel2);color:var(--pink);cursor:pointer;}
+  .btn{padding:11px 18px;border-radius:12px;border:2px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;cursor:pointer;}
+  .btn.primary{background:linear-gradient(180deg,#ff8fb1,#e46a92);border-color:#ffc4d6;color:#3a1020;font-weight:bold;}
+  .btn.mint{background:#1f4d42;border-color:#2f7a68;color:#8ef5d9;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--bg);padding:12px 0;}
+  textarea{width:100%;height:110px;background:var(--panel2);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:8px;font-size:11px;margin-top:8px;display:none;}
+  .ok{color:var(--mint);font-size:13px;margin-left:6px;}
+</style>
+</head>
+<body>
+<h1>🛠 슈가 블럭스 EDIT</h1>
+<div class="sub">
+  게임의 모든 조정 가능한 값을 개발자가 직접 편집하는 툴입니다.<br>
+  <b>사용법:</b> ① 아래 값들을 원하는 대로 수정 → ② [📤 배포용 복사] 클릭 → ③ <b>index.html</b>에서 <code>DEPLOY_TUNING</code>을 검색해 <code>null</code> 자리에 붙여넣기 → ④ GitHub 커밋 → Render 자동 배포 → 모든 사용자에게 적용!<br>
+  ※ [💾 브라우저에 임시 저장]을 누르면 이 툴을 다시 열었을 때 작업하던 값이 복원됩니다.
+</div>
+
+<div class="card"><h2>⭐ 뽑기 / 경제</h2>
+  <div class="desc">뽑기(갓차) 비용을 조절합니다. 값을 낮추면 아이템이 자주 나와 캐주얼해지고, 높이면 전략성이 올라갑니다.</div>
+  <div class="row"><label>뽑기 1회 비용 (별)<small>기본 5 · 줄을 지울 때마다 별이 1개씩 쌓입니다</small></label><input type="number" id="gachaCost" value="5" min="1" max="30"></div>
+</div>
+
+<div class="card"><h2>⏸ 게임 흐름</h2>
+  <div class="desc">일시정지·승패 후 대기 시간을 조절합니다.</div>
+  <div class="row"><label>대전 중 일시정지 최대 시간 (초)<small>기본 10 · 시간이 지나면 자동으로 게임이 재개됩니다 (혼자하기는 무제한)</small></label><input type="number" id="pauseLimit" value="10" min="3" max="60"></div>
+  <div class="row"><label>승패 후 카운트다운 (초)<small>기본 10 · 승리/패배 화면에서 재대결·나가기 선택 대기 시간</small></label><input type="number" id="overCount" value="10" min="3" max="30"></div>
+</div>
+
+<div class="card"><h2>🔥 콤보 추가 공격</h2>
+  <div class="desc">연속으로 줄을 지우면(콤보) 상대에게 추가 공격이 나갑니다. 공식: <b>추가 공격 줄 수 = 콤보 수 − 아래 값</b>. 기본 1이면 2연속=1줄, 3연속=2줄… 값을 2로 올리면 3연속부터 1줄씩(더 어렵게).</div>
+  <div class="row"><label>콤보 공격 차감값<small>기본 1 · 클수록 콤보 보너스가 약해집니다</small></label><input type="number" id="comboAtkOffset" value="1" min="1" max="5"></div>
+</div>
+
+<div class="card"><h2>⚔️ 공격 버튼</h2>
+  <div class="desc">파이트+아이템 모드의 공격 버튼 동작을 설정합니다. 자동=공격 가능해지면 즉시 발사, 수동=버튼을 눌러야 발사(사용자가 게임 중 버튼을 위/아래로 끌어 직접 바꿀 수도 있음).</div>
+  <div class="row"><label>기본 공격 모드<small>사용자가 처음 접속했을 때의 값</small></label>
+    <select id="atkModeDefault"><option value="auto">자동</option><option value="manual">수동</option></select></div>
+  <div class="row"><label>공격 버튼 기본 크기 (px)<small>기본 56 · 사용자도 설정에서 30~80으로 조절 가능</small></label><input type="number" id="atkSize" value="56" min="30" max="80"></div>
+</div>
+
+<div class="card"><h2>🍬 아이템 지속 시간 (ms)</h2>
+  <div class="desc">각 효과의 지속 시간입니다. 1000 = 1초. (모든 값은 이미 v17에서 +2초 반영된 기본값입니다)</div>
+  <div class="row"><label>🐢 거북이 사탕 — 내 블럭 슬로우<small>기본 12000</small></label><input type="number" id="dur_slow" value="12000" step="500"></div>
+  <div class="row"><label>⚡ 번개 젤리 — 상대 가속<small>기본 10000</small></label><input type="number" id="dur_zap" value="10000" step="500"></div>
+  <div class="row"><label>🌫️ 솜구름 안개 — 상대 혼란<small>기본 8000</small></label><input type="number" id="dur_fog" value="8000" step="500"></div>
+  <div class="row"><label>🙈 깜깜이 모자 — 상대 블럭 안 보임<small>기본 7000</small></label><input type="number" id="dur_blind" value="7000" step="500"></div>
+  <div class="row"><label>🔀 청개구리 물약 — 상대 좌우 반전<small>기본 7000</small></label><input type="number" id="dur_mirror" value="7000" step="500"></div>
+  <div class="row"><label>🛡️ 수호 방패 — 모든 공격 방어<small>기본 10000 (10S 방패)</small></label><input type="number" id="dur_aegis" value="10000" step="500"></div>
+</div>
+
+<div class="card"><h2>🎲 아이템 등장 확률 (가중치)</h2>
+  <div class="desc">숫자가 클수록 자주 나옵니다 (전체 대비 비율). 0으로 하면 그 아이템은 등장하지 않습니다. 비워두면 게임 기본값 사용.</div>
+  <div id="wBox"></div>
+</div>
+
+<div class="card"><h2>📝 설명창 (블럭 아래 안내 문구)</h2>
+  <div class="desc">게임 화면 하단 설명창의 기본 투명도와 글씨 크기입니다. 사용자도 설정에서 개별 조절할 수 있으며, 여기 값은 "처음 값"입니다.</div>
+  <div class="row"><label>기본 투명도 (0.2 ~ 1.0)<small>기본 0.6 · 낮을수록 투명</small></label><input type="number" id="captionOp" value="0.6" step="0.05" min="0.2" max="1"></div>
+  <div class="row"><label>기본 글씨 크기 (px)<small>기본 12</small></label><input type="number" id="captionFont" value="12" min="9" max="20"></div>
+</div>
+
+<div class="card"><h2>🎮 이동 버튼</h2>
+  <div class="desc">화면 터치 이동 버튼의 기본 크기입니다. (기본 표시 버튼: Z·Space·C·X, 나머지는 사용자가 설정에서 켤 수 있음)</div>
+  <div class="row"><label>버튼 기본 크기 (px)<small>기본 44 · 사용자도 배열 편집에서 26~90으로 조절 가능</small></label><input type="number" id="padSizeDefault" value="44" min="26" max="90"></div>
+</div>
+
+<div class="card"><h2>🖼 배경 도감</h2>
+  <div class="desc">클래식 모드에서 공개되는 배경 그림 목록입니다. <b>id</b>는 도감에 표시되는 짧은 이름, <b>src</b>는 이미지 주소(URL 또는 데이터URI)입니다. 한 줄이라도 입력하면 게임의 기본 도감 전체가 이 목록으로 <b>교체</b>됩니다. 비워두면 기본 도감 유지.</div>
+  <div id="bgBox"></div>
+  <button class="btn" id="bgAdd">＋ 배경 추가</button>
+</div>
+
+<div class="actions">
+  <button class="btn primary" id="exportBtn">📤 배포용 복사 (DEPLOY_TUNING)</button>
+  <button class="btn mint" id="saveBtn">💾 브라우저에 임시 저장</button>
+  <button class="btn" id="resetBtn">↩ 기본값으로</button>
+  <span class="ok" id="okMsg"></span>
+</div>
+<textarea id="outTa" readonly></textarea>
+
+<script>
+const ITEM_IDS=[["bomb","💣 폭탄 (바닥 2줄 삭제)","12"],["clear","🧹 청소 (바닥 4줄)","4"],["shield","🛡️ 방패 (2줄 방어)","12"],
+ ["slow","🐢 거북이 (내 슬로우)","12"],["candy","🍬 캔디 (별+3)","20"],["hold","🔮 저장 구슬","8"],["aegis","🛡️ 수호 방패(10초)","5"],
+ ["attack","🌠 즉시 2줄 공격","8"],["tornado","🌪️ 회오리","10"],["zap","⚡ 번개","10"],["fog","🌫️ 안개","5"],
+ ["blind","🙈 깜깜이","8"],["mirror","🔀 청개구리","8"],["holes","🧀 치즈 펀치","4"]];
+const NUM_IDS=["gachaCost","pauseLimit","overCount","comboAtkOffset","atkSize","dur_slow","dur_zap","dur_fog","dur_blind","dur_mirror","dur_aegis","captionOp","captionFont","padSizeDefault"];
+const $=id=>document.getElementById(id);
+
+/* 아이템 가중치 UI */
+const wBox=$("wBox");
+ITEM_IDS.forEach(([id,label,def])=>{
+  const r=document.createElement("div"); r.className="row";
+  r.innerHTML=`<label>${label}<small>기본 ${def}</small></label><input type="number" data-w="${id}" value="${def}" min="0" max="99">`;
+  wBox.appendChild(r);
+});
+
+/* 배경 도감 UI */
+function addBgRow(id="",src=""){
+  const r=document.createElement("div"); r.className="bgrow";
+  r.innerHTML=`<input class="id" placeholder="id (예: 벚꽃)" value="${id.replace(/"/g,"&quot;")}">
+    <input placeholder="이미지 주소 https://... " value="${src.replace(/"/g,"&quot;")}">
+    <button>✕</button>`;
+  r.querySelector("button").addEventListener("click",()=>r.remove());
+  $("bgBox").appendChild(r);
+}
+$("bgAdd").addEventListener("click",()=>addBgRow());
+
+function collect(){
+  const out={};
+  NUM_IDS.forEach(id=>out[id]=+$(id).value);
+  out.atkModeDefault=$("atkModeDefault").value;
+  const w={}; document.querySelectorAll("[data-w]").forEach(i=>w[i.dataset.w]=+i.value);
+  out.itemWeights=w;
+  const bgs=[...document.querySelectorAll(".bgrow")].map(r=>{
+    const [a,b]=r.querySelectorAll("input"); return {id:a.value.trim(),src:b.value.trim()};
+  }).filter(b=>b.id&&b.src);
+  if(bgs.length)out.backgrounds=bgs;
+  return out;
+}
+function fill(d){
+  NUM_IDS.forEach(id=>{ if(d[id]!=null)$(id).value=d[id]; });
+  if(d.atkModeDefault)$("atkModeDefault").value=d.atkModeDefault;
+  if(d.itemWeights)document.querySelectorAll("[data-w]").forEach(i=>{ if(d.itemWeights[i.dataset.w]!=null)i.value=d.itemWeights[i.dataset.w]; });
+  $("bgBox").innerHTML=""; (d.backgrounds||[]).forEach(b=>addBgRow(b.id,b.src));
+}
+$("exportBtn").addEventListener("click",async()=>{
+  const txt=JSON.stringify(collect());
+  try{ await navigator.clipboard.writeText(txt); $("okMsg").textContent="📤 복사 완료! index.html의 DEPLOY_TUNING = null 자리에 붙여넣으세요"; }
+  catch(e){ const ta=$("outTa"); ta.style.display="block"; ta.value=txt; ta.select(); $("okMsg").textContent="아래 텍스트를 직접 복사하세요"; }
+});
+$("saveBtn").addEventListener("click",()=>{ localStorage.setItem("sb_edit",JSON.stringify(collect())); $("okMsg").textContent="💾 저장됨 (이 브라우저에서 복원됩니다)"; });
+$("resetBtn").addEventListener("click",()=>location.reload());
+try{ const d=JSON.parse(localStorage.getItem("sb_edit")); if(d)fill(d); }catch(e){}
+</script>
+</body>
+</html>

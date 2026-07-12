@@ -46,11 +46,20 @@ let nextRoomId=1;
 const rooms=new Map(); // id → {id,name,mode,players:[ws],hostInfo}
 function send(ws,obj){ try{ if(ws.readyState===1)ws.send(JSON.stringify(obj)); }catch(e){} }
 function roomList(){ return [...rooms.values()].filter(r=>r.players.length===1)
-  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,vs:r.vs||"vs1",host:r.hostInfo.name,wins:r.hostInfo.wins||0,rp:r.hostInfo.rp||0})); }
+  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,vs:r.vs||"vs1",host:r.hostInfo.name,wins:r.hostInfo.wins||0,losses:r.hostInfo.losses||0,rp:r.hostInfo.rp||0})); }
 function broadcastRooms(){ const list=roomList();
   wss.clients.forEach(c=>{ if(c.meta&&!c.meta.room)send(c,{t:"rooms",list}); }); }
 function peerOf(ws){ const r=ws.meta&&ws.meta.room; if(!r)return null; return r.players.find(p=>p!==ws)||null; }
-function info(ws){ return {name:ws.meta.name,wins:ws.meta.wins,rp:ws.meta.rp,streak:ws.meta.streak}; }
+function info(ws){ return {name:ws.meta.name,wins:ws.meta.wins,losses:ws.meta.losses||0,rp:ws.meta.rp,streak:ws.meta.streak}; }
+/* 🟢 접속자 목록: 대기/게임 중 상태 + 전적 포함 */
+function userList(){ const out=[];
+  wss.clients.forEach(c=>{ if(c.meta&&c.meta.name!=="?")
+    out.push({name:c.meta.name,wins:c.meta.wins,losses:c.meta.losses||0,rp:c.meta.rp,
+      state:(c.meta.room&&c.meta.room.players.length===2)?"playing":"lobby"}); });
+  return out; }
+function broadcastUsers(){ const list=userList();
+  wss.clients.forEach(c=>{ if(c.meta)send(c,{t:"users",list}); }); }
+function findByName(name){ let f=null; wss.clients.forEach(c=>{ if(c.meta&&c.meta.name===name)f=c; }); return f; }
 function leaveRoom(ws,notify){
   const r=ws.meta&&ws.meta.room; if(!r)return;
   const peer=peerOf(ws);
@@ -59,13 +68,13 @@ function leaveRoom(ws,notify){
   rooms.delete(r.id); broadcastRooms();
 }
 wss.on("connection", ws=>{
-  ws.meta={name:"?",wins:0,rp:0,streak:0,room:null};
+  ws.meta={name:"?",wins:0,losses:0,rp:0,streak:0,room:null,chFrom:null};
   ws.on("message", data=>{
     let m; try{ m=JSON.parse(data); }catch(e){ return; }
     switch(m.t){
       case "hello": ws.meta.name=String(m.name||"?").slice(0,12);
-        ws.meta.wins=+m.wins||0; ws.meta.rp=+m.rp||0; ws.meta.streak=+m.streak||0;
-        send(ws,{t:"rooms",list:roomList()}); break;
+        ws.meta.wins=+m.wins||0; ws.meta.losses=+m.losses||0; ws.meta.rp=+m.rp||0; ws.meta.streak=+m.streak||0;
+        send(ws,{t:"rooms",list:roomList()}); broadcastUsers(); break;
       case "list": send(ws,{t:"rooms",list:roomList()}); break;
       case "board": send(ws,{t:"board",list:topBoard()}); break;      // 🏆 주간 랭킹
       case "win": recordWin(ws.meta.name, ws.meta.rp); break;          // 승리 보고
@@ -86,12 +95,30 @@ wss.on("connection", ws=>{
         const [a,b]=r.players;
         send(a,{t:"start",mode:r.mode,style:r.style,opp:info(b)});
         send(b,{t:"start",mode:r.mode,style:r.style,opp:info(a)});
-        broadcastRooms(); break; }
+        broadcastRooms(); broadcastUsers(); break; }
       case "relay": { const p=peerOf(ws); if(p)send(p,m); break; }
-      case "leave": leaveRoom(ws,true); break;
+      case "leave": leaveRoom(ws,true); broadcastUsers(); break;
+      /* ⚔️ 대전 신청: 대기 중인 상대에게 전달 */
+      case "challenge": { const t=findByName(String(m.to||""));
+        if(!t||t===ws){ break; }
+        if(t.meta.room&&t.meta.room.players.length===2){ send(ws,{t:"chDeclined",name:t.meta.name}); break; }
+        t.meta.chFrom={ws,mode:["classic","fight","fightItem"].includes(m.mode)?m.mode:"fight",
+          style:m.style==="buster"?"buster":"tetris"};
+        send(t,{t:"challenge",from:Object.assign(info(ws),{mode:t.meta.chFrom.mode})}); break; }
+      case "chAnswer": { const ch=ws.meta.chFrom; ws.meta.chFrom=null;
+        if(!ch||!ch.ws||ch.ws.readyState!==1){ break; }
+        if(!m.ok){ send(ch.ws,{t:"chDeclined",name:ws.meta.name}); break; }
+        /* ✅ 수락 → 즉시 방 생성 + 양쪽 시작 (일반 방 입장과 동일 흐름) */
+        if(ws.meta.room)leaveRoom(ws,true); if(ch.ws.meta.room)leaveRoom(ch.ws,true);
+        const r={id:nextRoomId++, name:"⚔️"+ch.ws.meta.name, mode:ch.mode, style:ch.style, vs:"vs1",
+          players:[ch.ws,ws], hostInfo:info(ch.ws)};
+        rooms.set(r.id,r); ch.ws.meta.room=r; ws.meta.room=r;
+        send(ch.ws,{t:"start",mode:r.mode,style:r.style,opp:info(ws)});
+        send(ws,{t:"start",mode:r.mode,style:r.style,opp:info(ch.ws)});
+        broadcastRooms(); broadcastUsers(); break; }
     }
   });
-  ws.on("close",()=>leaveRoom(ws,true));
+  ws.on("close",()=>{ leaveRoom(ws,true); broadcastUsers(); });
 });
 httpServer.listen(PORT,()=>{
   console.log("⭐ Sugar Blocks 서버 시작!");
