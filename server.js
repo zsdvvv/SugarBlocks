@@ -50,6 +50,18 @@ function roomList(){ return [...rooms.values()].filter(r=>!r.started && r.player
 function broadcastRooms(){ const list=roomList();
   wss.clients.forEach(c=>{ if(c.meta&&!c.meta.room)send(c,{t:"rooms",list}); }); }
 function peerOf(ws){ const r=ws.meta&&ws.meta.room; if(!r)return null; return r.players.find(p=>p!==ws)||null; }
+function startRoom(r){ // 게임 시작 공통 처리
+  r.started=true;
+  r.players.forEach((p,i)=>{ p.meta.pid=i; });
+  const roster=r.players.map((p,i)=>({id:i,name:p.meta.name,rp:p.meta.rp,wins:p.meta.wins,losses:p.meta.losses||0,
+    team: r.vs==="team22" ? (i<2?0:1) : null})); // 2:2 = 입장 순서대로 [0,1]팀 vs [2,3]팀
+  r.players.forEach((p,i)=>{
+    const msg={t:"start",mode:r.mode,style:r.style,vs:r.vs,you:i,players:roster};
+    if(r.players.length===2) msg.opp=info(r.players[1-i]); // 1:1 하위호환
+    send(p,msg);
+  });
+  broadcastRooms(); broadcastUsers();
+}
 function sendRoomState(r){ // 🚪 대기실: 멤버 목록을 방 전원에게
   const members=r.players.map((p,i)=>({id:i,name:p.meta.name,rp:p.meta.rp,wins:p.meta.wins,losses:p.meta.losses||0}));
   r.players.forEach(p=>send(p,{t:"roomState",id:r.id,name:r.name,vs:r.vs,cap:r.cap,
@@ -109,21 +121,13 @@ wss.on("connection", ws=>{
         if(!r||r.started||r.players.length>=r.cap){ send(ws,{t:"err",msg:"room unavailable"}); send(ws,{t:"rooms",list:roomList()}); break; }
         if(ws.meta.room)leaveRoom(ws,true);
         r.players.push(ws); ws.meta.room=r;
-        sendRoomState(r); // 대기실: 누가 들어왔는지 전원에게 표시
+        if(r.vs==="vs1" && r.players.length>=r.cap){ startRoom(r); break; } // ⭐ 1:1은 이전처럼 즉시 시작
+        sendRoomState(r); // 2:2/1:5 대기실: 누가 들어왔는지 전원에게 표시
         broadcastRooms(); broadcastUsers(); break; }
-      case "startGame": { // ▶ 방장만 시작 가능 (2명 이상)
+      case "startGame": { // ▶ 방장만 시작 가능 (2명 이상) — 2:2/1:5 전용
         const r=ws.meta.room;
         if(!r||r.started||r.players[0]!==ws||r.players.length<2)break;
-        r.started=true;
-        r.players.forEach((p,i)=>{ p.meta.pid=i; });
-        const roster=r.players.map((p,i)=>({id:i,name:p.meta.name,rp:p.meta.rp,wins:p.meta.wins,losses:p.meta.losses||0,
-          team: r.vs==="team22" ? (i<2?0:1) : null})); // 2:2 = 입장 순서대로 [0,1]팀 vs [2,3]팀
-        r.players.forEach((p,i)=>{
-          const msg={t:"start",mode:r.mode,style:r.style,vs:r.vs,you:i,players:roster};
-          if(r.players.length===2) msg.opp=info(r.players[1-i]); // 1:1 하위호환
-          send(p,msg);
-        });
-        broadcastRooms(); broadcastUsers(); break; }
+        startRoom(r); break; }
       case "relay": { const r=ws.meta.room; if(!r)break;
         m.from = ws.meta.pid!=null ? ws.meta.pid : r.players.indexOf(ws); // 보낸 사람 id
         if(m.to!=null){ const t=r.players.find(p=>(p.meta.pid!=null?p.meta.pid:r.players.indexOf(p))===m.to);
