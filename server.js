@@ -45,27 +45,42 @@ const wss = new WebSocket.Server({ server: httpServer });
 let nextRoomId=1;
 const rooms=new Map(); // id → {id,name,mode,players:[ws],hostInfo}
 function send(ws,obj){ try{ if(ws.readyState===1)ws.send(JSON.stringify(obj)); }catch(e){} }
-function roomList(){ return [...rooms.values()].filter(r=>r.players.length===1)
-  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,vs:r.vs||"vs1",host:r.hostInfo.name,wins:r.hostInfo.wins||0,losses:r.hostInfo.losses||0,rp:r.hostInfo.rp||0})); }
+function roomList(){ return [...rooms.values()].filter(r=>!r.started && r.players.length<r.cap)
+  .map(r=>({id:r.id,name:r.name,mode:r.mode,style:r.style,vs:r.vs||"vs1",cnt:r.players.length,cap:r.cap||2,host:r.hostInfo.name,wins:r.hostInfo.wins||0,losses:r.hostInfo.losses||0,rp:r.hostInfo.rp||0})); }
 function broadcastRooms(){ const list=roomList();
   wss.clients.forEach(c=>{ if(c.meta&&!c.meta.room)send(c,{t:"rooms",list}); }); }
 function peerOf(ws){ const r=ws.meta&&ws.meta.room; if(!r)return null; return r.players.find(p=>p!==ws)||null; }
+function sendRoomState(r){ // 🚪 대기실: 멤버 목록을 방 전원에게
+  const members=r.players.map((p,i)=>({id:i,name:p.meta.name,rp:p.meta.rp,wins:p.meta.wins,losses:p.meta.losses||0}));
+  r.players.forEach(p=>send(p,{t:"roomState",id:r.id,name:r.name,vs:r.vs,cap:r.cap,
+    host:r.players[0].meta.name, you:r.players.indexOf(p), members}));
+}
 function info(ws){ return {name:ws.meta.name,wins:ws.meta.wins,losses:ws.meta.losses||0,rp:ws.meta.rp,streak:ws.meta.streak}; }
 /* 🟢 접속자 목록: 대기/게임 중 상태 + 전적 포함 */
 function userList(){ const out=[];
   wss.clients.forEach(c=>{ if(c.meta&&c.meta.name!=="?")
     out.push({name:c.meta.name,wins:c.meta.wins,losses:c.meta.losses||0,rp:c.meta.rp,
-      state:(c.meta.room&&c.meta.room.players.length===2)?"playing":"lobby"}); });
+      state:(c.meta.room&&c.meta.room.started)?"playing":"lobby"}); });
   return out; }
 function broadcastUsers(){ const list=userList();
   wss.clients.forEach(c=>{ if(c.meta)send(c,{t:"users",list}); }); }
 function findByName(name){ let f=null; wss.clients.forEach(c=>{ if(c.meta&&c.meta.name===name)f=c; }); return f; }
 function leaveRoom(ws,notify){
   const r=ws.meta&&ws.meta.room; if(!r)return;
-  const peer=peerOf(ws);
-  r.players=r.players.filter(p=>p!==ws); ws.meta.room=null;
-  if(peer&&notify){ send(peer,{t:"oppLeft"}); peer.meta.room=null; }
-  rooms.delete(r.id); broadcastRooms();
+  const wasHost = r.players[0]===ws;
+  const pid = ws.meta.pid!=null ? ws.meta.pid : r.players.indexOf(ws);
+  r.players=r.players.filter(p=>p!==ws); ws.meta.room=null; ws.meta.pid=null;
+  if(r.started){ // 게임 중 이탈 → 남은 전원에게 알림 (해당 플레이어 사망 처리)
+    if(notify)r.players.forEach(p=>send(p,{t:"pLeft",id:pid}));
+    if(r.players.length<=1){ if(r.players[0]){ send(r.players[0],{t:"oppLeft"}); r.players[0].meta.room=null; r.players[0].meta.pid=null; }
+      rooms.delete(r.id); }
+  } else { // 대기실 이탈
+    if(wasHost || !r.players.length){ // 방장이 나가면 방 해산
+      r.players.forEach(p=>{ send(p,{t:"roomClosed"}); p.meta.room=null; });
+      rooms.delete(r.id);
+    } else sendRoomState(r);
+  }
+  broadcastRooms();
 }
 wss.on("connection", ws=>{
   ws.meta={name:"?",wins:0,losses:0,rp:0,streak:0,room:null,chFrom:null};
@@ -80,28 +95,46 @@ wss.on("connection", ws=>{
       case "win": recordWin(ws.meta.name, ws.meta.rp); break;          // 승리 보고
       case "create": {
         if(ws.meta.room)leaveRoom(ws,true);
+        const vs=["vs1","team22","vsN"].includes(m.vs)?m.vs:"vs1";
         const r={id:nextRoomId++, name:String(m.name||"room").slice(0,14),
           mode:["classic","fight","fightItem"].includes(m.mode)?m.mode:"fight",
           style:m.style==="buster"?"buster":"tetris",
-          vs:m.vs==="vsN"?"vsN":"vs1", // 1:1 / 1:다수 (방 목록에 표시)
+          vs, cap: vs==="vs1"?2 : vs==="team22"?4 : 6, // 정원
+          started:false,
           players:[ws], hostInfo:info(ws)};
         rooms.set(r.id,r); ws.meta.room=r;
-        send(ws,{t:"created",id:r.id}); broadcastRooms(); break; }
+        send(ws,{t:"created",id:r.id}); sendRoomState(r); broadcastRooms(); break; }
       case "join": {
         const r=rooms.get(m.id);
-        if(!r||r.players.length!==1){ send(ws,{t:"err",msg:"room unavailable"}); send(ws,{t:"rooms",list:roomList()}); break; }
+        if(!r||r.started||r.players.length>=r.cap){ send(ws,{t:"err",msg:"room unavailable"}); send(ws,{t:"rooms",list:roomList()}); break; }
         if(ws.meta.room)leaveRoom(ws,true);
         r.players.push(ws); ws.meta.room=r;
-        const [a,b]=r.players;
-        send(a,{t:"start",mode:r.mode,style:r.style,opp:info(b)});
-        send(b,{t:"start",mode:r.mode,style:r.style,opp:info(a)});
+        sendRoomState(r); // 대기실: 누가 들어왔는지 전원에게 표시
         broadcastRooms(); broadcastUsers(); break; }
-      case "relay": { const p=peerOf(ws); if(p)send(p,m); break; }
+      case "startGame": { // ▶ 방장만 시작 가능 (2명 이상)
+        const r=ws.meta.room;
+        if(!r||r.started||r.players[0]!==ws||r.players.length<2)break;
+        r.started=true;
+        r.players.forEach((p,i)=>{ p.meta.pid=i; });
+        const roster=r.players.map((p,i)=>({id:i,name:p.meta.name,rp:p.meta.rp,wins:p.meta.wins,losses:p.meta.losses||0,
+          team: r.vs==="team22" ? (i<2?0:1) : null})); // 2:2 = 입장 순서대로 [0,1]팀 vs [2,3]팀
+        r.players.forEach((p,i)=>{
+          const msg={t:"start",mode:r.mode,style:r.style,vs:r.vs,you:i,players:roster};
+          if(r.players.length===2) msg.opp=info(r.players[1-i]); // 1:1 하위호환
+          send(p,msg);
+        });
+        broadcastRooms(); broadcastUsers(); break; }
+      case "relay": { const r=ws.meta.room; if(!r)break;
+        m.from = ws.meta.pid!=null ? ws.meta.pid : r.players.indexOf(ws); // 보낸 사람 id
+        if(m.to!=null){ const t=r.players.find(p=>(p.meta.pid!=null?p.meta.pid:r.players.indexOf(p))===m.to);
+          if(t&&t!==ws)send(t,m); }               // 🎯 지정 대상(최소 스택 공격 등)
+        else r.players.forEach(p=>{ if(p!==ws)send(p,m); }); // 전체 방송
+        break; }
       case "leave": leaveRoom(ws,true); broadcastUsers(); break;
       /* ⚔️ 대전 신청: 대기 중인 상대에게 전달 */
       case "challenge": { const t=findByName(String(m.to||""));
         if(!t||t===ws){ break; }
-        if(t.meta.room&&t.meta.room.players.length===2){ send(ws,{t:"chDeclined",name:t.meta.name}); break; }
+        if(t.meta.room&&t.meta.room.started){ send(ws,{t:"chDeclined",name:t.meta.name}); break; }
         t.meta.chFrom={ws,mode:["classic","fight","fightItem"].includes(m.mode)?m.mode:"fight",
           style:m.style==="buster"?"buster":"tetris"};
         send(t,{t:"challenge",from:Object.assign(info(ws),{mode:t.meta.chFrom.mode})}); break; }
@@ -110,11 +143,13 @@ wss.on("connection", ws=>{
         if(!m.ok){ send(ch.ws,{t:"chDeclined",name:ws.meta.name}); break; }
         /* ✅ 수락 → 즉시 방 생성 + 양쪽 시작 (일반 방 입장과 동일 흐름) */
         if(ws.meta.room)leaveRoom(ws,true); if(ch.ws.meta.room)leaveRoom(ch.ws,true);
-        const r={id:nextRoomId++, name:"⚔️"+ch.ws.meta.name, mode:ch.mode, style:ch.style, vs:"vs1",
+        const r={id:nextRoomId++, name:"⚔️"+ch.ws.meta.name, mode:ch.mode, style:ch.style, vs:"vs1", cap:2, started:true,
           players:[ch.ws,ws], hostInfo:info(ch.ws)};
         rooms.set(r.id,r); ch.ws.meta.room=r; ws.meta.room=r;
-        send(ch.ws,{t:"start",mode:r.mode,style:r.style,opp:info(ws)});
-        send(ws,{t:"start",mode:r.mode,style:r.style,opp:info(ch.ws)});
+        ch.ws.meta.pid=0; ws.meta.pid=1;
+        const roster=[Object.assign({id:0,team:null},info(ch.ws)),Object.assign({id:1,team:null},info(ws))];
+        send(ch.ws,{t:"start",mode:r.mode,style:r.style,vs:"vs1",you:0,players:roster,opp:info(ws)});
+        send(ws,{t:"start",mode:r.mode,style:r.style,vs:"vs1",you:1,players:roster,opp:info(ch.ws)});
         broadcastRooms(); broadcastUsers(); break; }
     }
   });
